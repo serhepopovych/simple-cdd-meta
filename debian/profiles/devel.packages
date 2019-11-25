@@ -1,0 +1,40 @@
+
+# Common
+build-essential
+fakeroot
+automake
+autoconf
+make
+patch
+diffutils
+
+# C
+linux-libc-dev
+binutils
+gcc
+cpp
+
+# Perl
+perl
+perl-base
+
+# Python2.7
+python2.7
+python2.7-minimal
+
+# Python3.x
+python3
+python3-minimal
+
+# Tcl
+tcl
+
+# Packaging support
+whiptail
+debconf
+debconf-utils
+debian-archive-keyring
+debianutils
+
+distro-info
+distro-info-data

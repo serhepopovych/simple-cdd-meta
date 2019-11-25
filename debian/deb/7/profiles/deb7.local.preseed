@@ -1,0 +1,23 @@
+
+# If you want the preconfiguration file to work on systems both with and
+# without a dhcp server, uncomment these lines.
+d-i netcfg/dhcp_failed note
+d-i netcfg/dhcp_options select Do not configure the network at this time
+
+# Use a network mirror? To support installation when no network available
+# disable mirror setup and provide /etc/apt/sources.list in postinst script.
+d-i apt-setup/use_mirror boolean false
+# Stop choosing mirrors on first failure. Mirrors are verified at install time.
+d-i apt-setup/no_mirror boolean true
+d-i apt-setup/mirror/error select Ignore
+
+# This will prevent the installer from ejecting the CD during the reboot,
+# if set to "false", which is useful in some situations.
+d-i cdrom-detect/eject boolean false
+
+# Most flexibly of all, this downloads a program and runs it. The program
+# can use commands such as debconf-set to manipulate the debconf database.
+# More than one script can be listed, separated by spaces.
+# Note that if the filenames are relative, they are taken from the same
+# directory as the preconfiguration file that runs them.
+d-i preseed/run string init.sh

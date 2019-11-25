@@ -1,0 +1,146 @@
+# Init manager
+systemd
+systemd-sysv
+
+# Install dbus, which is required when systemd is used:
+# https://bugs.debian.org/776530
+dbus
+
+# Linux Standard Base meta package
+lsb-base
+lsb-release
+
+# Locales and timezones
+gettext-base
+locales
+tzdata
+
+# Console configuration and data
+console-common
+console-data
+console-setup
+console-setup-linux
+
+# Keyboard configuration and data
+kbd
+keyboard-configuration
+
+# Shells and utilites
+dash
+bash
+bash-completion
+gawk
+grep
+sed
+less
+file
+findutils
+
+# Common Linux utilities
+coreutils
+util-linux
+procps
+psmisc
+
+# Archivers
+tar
+cpio
+gzip
+bzip2
+xz-utils
+
+# Editors
+nano
+vim-tiny
+
+# SSL
+ca-certificates
+ssl-cert
+openssl
+
+# GnuPG
+gnupg
+gpgv
+
+# Credentials management tools
+base-passwd
+passwd
+login
+sudo
+
+# Package management tools
+dpkg
+
+apt
+apt-utils
+
+tasksel
+tasksel-data
+
+# Boot utils
+ipxe
+
+busybox-static
+
+efibootmgr
+initramfs-tools
+#pv-grub-menu
+
+# Partition table, Linux MD and LVM management tools
+gdisk
+mdadm
+lvm2
+
+# Filesystem mount and quota
+mount
+
+# Common filesystem management tools
+e2fsprogs
+xfsprogs
+dosfstools
+
+# Power management support
+powermgmt-base
+acpi
+acpid
+acpi-support-base
+
+# Network management utilities
+hostname
+netbase
+
+net-tools
+
+isc-dhcp-common
+isc-dhcp-client
+
+ifupdown
+
+# Network diagnostics tool
+iputils-ping
+iputils-tracepath
+
+# Command line utils for data transfer
+wget
+curl
+
+# Firewall management utilities
+iptables
+iptables-persistent
+
+# SSH, NTP, HTTP(S) and SNMP services
+openssh-client
+openssh-server
+
+# NTP service
+ntp
+
+# MTA (Mail Transfer Agent)
+postfix
+
+# Logging support
+rsyslog
+logrotate
+
+# Running jobs periodically
+cron

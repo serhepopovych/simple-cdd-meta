@@ -1,0 +1,44 @@
+## common
+scripts/common/bootstrap.sh
+scripts/common/init.sh
+scripts/common/partman.sh
+
+## debian
+scripts/debian/init.sh
+scripts/debian/init2.sh
+scripts/debian/bootstrap2.sh
+
+# early/late hooks
+scripts/debian/early_command.sh
+scripts/debian/late_command.sh
+
+# partman hook
+scripts/debian/partman/early_command.sh
+scripts/debian/partman/run.sh
+
+# btrfs
+scripts/debian/partman/btrfs/source.sh
+scripts/debian/partman/btrfs/1GB
+scripts/debian/partman/btrfs/2GB
+scripts/debian/partman/btrfs/3GB
+scripts/debian/partman/btrfs/5GB
+scripts/debian/partman/btrfs/10GB
+scripts/debian/partman/btrfs/20GB
+scripts/debian/partman/btrfs/default
+
+# lvm
+scripts/debian/partman/lvm/source.sh
+scripts/debian/partman/lvm/10GB
+scripts/debian/partman/lvm/25GB
+scripts/debian/partman/lvm/50GB
+scripts/debian/partman/lvm/default
+
+# regular
+scripts/debian/partman/regular/source.sh
+scripts/debian/partman/regular/10GB
+scripts/debian/partman/regular/25GB
+scripts/debian/partman/regular/50GB
+scripts/debian/partman/regular/default
+
+# Fetch for clarity
+scripts/init.sh

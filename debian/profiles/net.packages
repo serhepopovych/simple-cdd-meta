@@ -1,0 +1,59 @@
+
+# Terminal emulation program
+minicom
+
+# Network helpers
+aggregate
+ipcalc
+ipv6calc
+sipcalc
+
+whois
+
+ethtool
+
+bridge-utils
+vlan
+
+# Firewall management utilities
+ipset
+
+iptables
+iptables-persistent
+conntrack
+#nfct
+
+# TCP wrappers support
+tcpd
+
+# Network diagnostics tool
+iputils-arping
+
+mtr-tiny
+
+traceroute
+tcptraceroute
+
+hping3
+
+tcpdump
+
+telnet
+netcat
+netcat-openbsd
+netcat-traditional
+
+ndisc6
+
+dnsutils
+dnstracer
+
+# System and Network performance monitoring tools
+atop
+htop
+
+bwm-ng
+ifstat
+iftop
+
+sysstat

@@ -1,0 +1,1305 @@
+#!/bin/bash
+
+## Global config
+
+# Initial user account that can be used by automation setup services.
+user='setup'
+
+## Global helper routines
+
+true()  {   :; }
+false() { ! :; }
+
+## Initial setup based on distro
+
+eval $(
+    # Source in subshell to not pollute environment
+
+    release_file='/etc/os-release'
+
+    if [ -f "$release_file" ] && . "$release_file" >/dev/null 2>&1; then
+        distro="$ID"
+        release="$VERSION_ID"
+        codename="$VERSION_CODENAME"
+        [ -n "$codename" ] ||
+            codename="$(echo "$PRETTY_NAME" | sed -n -e 's/^.*(\(\w\+\)).*$/\1/p')"
+    elif type lsb_release >/dev/null 2>&1; then
+        distro="$(lsb_release -s -i)"
+        release="$(lsb_release -s -r)"
+        codename="$(lsb_release -s -c)"
+    else
+        # old or unsupported distro
+        distro=''
+        release=''
+        codename=''
+    fi
+
+    distro="$(echo "$distro" | tr '[:upper:]' '[:lower:]')"
+    [ -n "$distro" ] || exit
+
+    release="${release%%.*}"
+    [ "$release" -gt 0 ] 2>/dev/null || exit
+
+    if [ "$distro" = 'centos' ]; then
+        last_supported_release=7
+    elif [ "$distro" = 'debian' ]; then
+        last_supported_release=9
+    else
+        # unsupported distro
+        exit 1
+    fi
+
+    [ $release -ge $last_supported_release ] &&
+        new_distro=true || new_distro=false
+
+    if [ "$distro" = 'debian' ]; then
+        if $new_distro; then
+            apt_url='http://deb.debian.org'
+        else
+            apt_url='http://archive.debian.org'
+        fi
+    else
+        apt_url=''
+    fi
+
+    printf 'distro=%s release=%s codename=%s new_distro=%s apt_url=%s\n' \
+        "$distro" "$release" "$codename" "$new_distro" "$apt_url"
+)
+
+[ -n "$distro" ] || exit
+
+## Define package manager command that checks if package installed
+
+if type rpm >/dev/null 2>&1; then
+    pkg_installed="rpm -qi %s >/dev/null 2>&1"
+elif type dpkg >/dev/null 2>&1; then
+    pkg_installed="dpkg -s %s >/dev/null 2>&1"
+else
+    pkg_installed=false
+fi
+
+## Configure grub2 theme; support it on both "serial" and "console"; fix iPXE support on EFI
+
+update_grub=
+grub_serial_tty=
+
+# Enable "serial" and "console"
+grub2default='/etc/default/grub'
+if [ -f "$grub2default" ]; then
+    # From grub-installer udeb
+    get_serial_console() {
+        eval set -- $(cat '/proc/cmdline')
+
+        local serial=
+
+        # Get the last 'console=' entry (if none, the whole string is returned)
+        while [ $# -gt 0 ]; do
+            case "$1" in
+                console=ttyS*|console=com*) serial="$1" ;;
+            esac
+            shift
+        done
+
+        if [ -n "$serial" ]; then
+            echo "$serial"
+        fi
+    }
+
+    grub_serial_console() {
+        local serconsole="$1"
+        serconsole="${serconsole##console=ttyS}"
+        serconsole="${serconsole##console=com}"
+        local unit="${serconsole%%,*}"
+        local speed parity word
+        local options="${serconsole##*,}"
+
+        if [ -z "$unit" ]; then
+            return
+        fi
+        if [ "$unit" != "$options" ]; then
+            # Take optional 1st (parity) and 2nd (word) characters after speed
+            set -- `echo "$options" | sed -e 's,^\([0-9]*\)\(.\?\)\(.\?\).*$,\1 \2 \3,'`
+            speed="$1"
+            parity="$2"
+            word="$3"
+        fi
+        [ -n "$speed" ] || speed='115200'
+        case "$parity" in
+            n) parity='--parity=no'   ;;
+            e) parity='--parity=even' ;;
+            o) parity='--parity=odd'  ;;
+            *) parity=''              ;;
+        esac
+        [ -z "$word" ] || word="--word=$word"
+
+        echo "serial --unit=$unit --speed=$speed $word $parity --stop=1"
+    }
+
+    for g in pc efi-x64 efi-amd64 efi-ia32; do
+        eval "$(printf "$pkg_installed" "grub2-$g")" ||
+        eval "$(printf "$pkg_installed" "grub-$g")" ||
+            continue
+
+        # enable both serial and regular console
+
+        if grep -q '^GRUB_TERMINAL=' "$grub2default"; then
+            # it is set by installer or by default in config
+            sed -i "$grub2default" -e 's,^\(GRUB_TERMINAL\)=.*,\1="serial console",g'
+        else
+            echo "GRUB_TERMINAL=\"serial console\"" >> "$grub2default"
+        fi
+
+        if grep -q '^GRUB_SERIAL_COMMAND=.*--unit=\([0-9]*\).*' "$grub2default"; then
+            # it is set by installer or by default in config
+            :
+        else
+            serial="$(get_serial_console)"
+            # From grub-efi.cfg
+            serial="${serial:-console=ttyS0,115200n8}"
+            echo "GRUB_SERIAL_COMMAND=\"$(grub_serial_console "$serial")\"" >> "$grub2default"
+        fi
+
+        grub_serial_tty="$(sed -n -e 's,^GRUB_SERIAL_COMMAND=.*--unit=\([0-9]*\).*,\1,p' "$grub2default")"
+        if [ -n "$grub_serial_tty" ]; then
+            grub_serial_tty="ttyS$grub_serial_tty"
+
+            if [ -d '/sys/firmware/efi' ]; then
+                # replace --unit=<u> with efi<u> on EFI systems to fix artifacts
+                sed -i "$grub2default" -e '/^GRUB_SERIAL_COMMAND=/s,--unit=\([0-9]*\),efi\1,g'
+            fi
+        fi
+
+        update_grub=y
+        break
+    done
+fi # [ -f "$grub2default" ]
+
+# Apply theme from debian-installer/build/boot/x86/grub/grub-efi.cfg
+grub2theme='/etc/grub.d/05_debian_theme'
+if [ -f "$grub2theme" ]; then
+    cat >"$grub2theme" <<'_EOF'
+#!/bin/sh
+
+set -e
+
+serial="$(sed -n -e 's,^GRUB_SERIAL_COMMAND=.*--unit=\([0-9]*\).*,\1,p' /etc/default/grub)"
+
+if [ -n "$serial" ]; then
+    if [ -d /sys/firmware/efi ]; then
+        cat <<EOF
+terminfo serial_efi$serial vt100-color -u
+terminfo serial_com$serial vt100-color -u
+EOF
+    else
+        cat <<EOF
+terminfo serial      vt100-color -u
+terminfo serial_com$serial vt100-color -u
+EOF
+    fi
+fi
+
+cat <<EOF
+
+set color_normal=light-gray/black
+set color_highlight=black/light-gray
+
+set menu_color_normal=cyan/blue
+set menu_color_highlight=blue/light-gray
+EOF
+_EOF
+
+    update_grub=y
+fi # [ -f "$grub2theme" ]
+
+# Add support for ipxe on BIOS and EFI systems
+
+# Usage: copy_ipxe_file <boot_ipxe>
+copy_ipxe_file()
+{
+    local func="${FUNCNAME:-copy_ipxe_file}"
+
+    local ipxe="${1:?missing 1st argument to ${func}() (boot_ipxe)}"
+
+    [ -f "$ipxe" ] && return
+
+    local file="${ipxe##*/}"
+    local ipxe_iter
+
+    for ipxe_iter in \
+        "/usr/share/ipxe/$file" \
+        "/usr/lib/ipxe/$file" \
+        #
+    do
+        if [ -f "$ipxe_iter" ]; then
+            install -Dm0644 "$ipxe_iter" "$ipxe"
+            return
+        fi
+    done
+
+    return 1
+}
+
+# ipxe.lkrn
+ipxe_lkrn='/boot/ipxe.lkrn'
+copy_ipxe_file "$ipxe_lkrn"
+
+# ipxe.efi
+ipxe_efi='/boot/ipxe.efi'
+copy_ipxe_file "$ipxe_efi"
+
+if [ -f "$ipxe_lkrn" -o -f "$ipxe_efi" ]; then
+    grub2ipxe='/etc/grub.d/20_ipxe'
+    cat >"$grub2ipxe" <<'_EOF'
+#!/bin/sh
+
+set -e
+
+. /usr/lib/grub/grub-mkconfig_lib
+
+# iPXE is only supported on x86
+case $(uname -m) in
+	i?86|x86_64) ;;
+	*) exit 0 ;;
+esac
+
+prepare_boot_cache="$(prepare_grub_to_access_device ${GRUB_DEVICE_BOOT} | sed -e "s/^/\t/")"
+
+if [ -d /sys/firmware/efi ]; then
+  IPXE=/boot/ipxe.efi
+else
+  IPXE=/boot/ipxe.lkrn
+fi
+
+if test -e "$IPXE" ; then
+  IPXEPATH=$( make_system_path_relative_to_its_root "$IPXE" )
+  echo "Found iPXE image: $IPXE" >&2
+  if [ -d /sys/firmware/efi ]; then
+    cat << EOF
+menuentry "Network boot (iPXE)" --users "" --class network {
+${prepare_boot_cache}
+	chainloader $IPXEPATH
+}
+EOF
+  else
+    cat << EOF
+menuentry "Network boot (iPXE)" --users "" --class network {
+${prepare_boot_cache}
+	linux16 $IPXEPATH
+}
+EOF
+  fi
+fi
+_EOF
+    # Make it executable
+    chmod a+rx "$grub2ipxe"
+
+    update_grub=y
+fi # [ -f "$grub2ipxe" ]
+
+# Ensure the updates go live
+if [ -n "$update_grub" ]; then
+    if type update-grub2 >/dev/null 2>&1; then
+        update-grub2
+    elif type update-grub >/dev/null 2>&1; then
+        update-grub
+    else
+        grub2-mkconfig -o '/boot/grub2/grub.cfg'
+    fi
+fi
+
+## Create `.' symlink in boot. This can be useful for compat configs
+
+boot_boot='/boot/boot'
+[ -e "$boot_boot" ] || ln -snf . "$boot_boot"
+
+## Enable agetty(8) on serial console
+
+if [ -n "$grub_serial_tty" ]; then
+    # systemctl(1) fails with old systemd (e.g. on Debian GNU/Linux 7.x (wheezy))
+    ln -snf '/lib/systemd/system/serial-getty@.service' \
+            "/etc/systemd/system/getty.target.wants/serial-getty@$grub_serial_tty.service" ||:
+fi
+
+## Enable acpid(8) service by default to handle PWRBTN action
+
+systemctl enable acpid.service ||:
+
+## Enable tmpfs for /tmp
+
+tmp_mount='/etc/systemd/system/tmp.mount'
+
+if [ ! -f "$tmp_mount" ]; then
+    for tmp_mount_share in \
+        '/usr/lib/systemd/system/tmp.mount' \
+        '/usr/share/systemd/tmp.mount' \
+        ''
+    do
+       if [ -f "$tmp_mount_share" ]; then
+           install -Dm0644 "$tmp_mount_share" "$tmp_mount" ||:
+           break
+       fi
+    done
+
+    if [ -z "$tmp_mount_share" ]; then
+        # From Ubuntu 16.04 LTS
+        cat >"$tmp_mount" <<'_EOF'
+#  This file is part of systemd.
+#
+#  systemd is free software; you can redistribute it and/or modify it
+#  under the terms of the GNU Lesser General Public License as published by
+#  the Free Software Foundation; either version 2.1 of the License, or
+#  (at your option) any later version.
+
+[Unit]
+Description=Temporary Directory
+Documentation=man:hier(7)
+Documentation=http://www.freedesktop.org/wiki/Software/systemd/APIFileSystems
+ConditionPathIsSymbolicLink=!/tmp
+DefaultDependencies=no
+Conflicts=umount.target
+Before=local-fs.target umount.target
+After=swap.target
+
+[Mount]
+What=tmpfs
+Where=/tmp
+Type=tmpfs
+Options=mode=1777,strictatime
+
+[Install]
+WantedBy=local-fs.target
+_EOF
+    fi
+fi
+
+if [ -f "$tmp_mount" ]; then
+    sed -i "$tmp_mount" -e 's,^\(Options\)=\(.*\)$,\1=\2\,size=25%,g'
+    systemctl enable "${tmp_mount##*/}"
+fi
+
+## Disable ipmitool package modules-load.d(8) impievd.conf (fails when no hw)
+
+ipmievd_conf='/usr/lib/modules-load.d/ipmievd.conf'
+if [ -f "$ipmievd_conf" ]; then
+    ln -snf /dev/null "/etc/modules-load.d/${ipmievd_conf##*/}"
+fi
+
+## Apply branding
+
+$(
+    # Source in subshell to not pollute environment
+    release_file='/etc/os-release'
+    if [ -f "$release_file" ] && . "$release_file" >/dev/null 2>&1; then
+        :
+    elif type lsb_release >/dev/null 2>&1; then
+        PRETTY_NAME="$(lsb_release -s -i)"
+    else
+        PRETTY_NAME=
+    fi
+
+    [ -n "$PRETTY_NAME" ] || PRETTY_NAME="$(uname -s)"
+
+    # /etc/issue
+    banner='/etc/issue'
+    if [ -f "$banner" ]; then
+        cat >"$banner" <<_EOF
+$PRETTY_NAME
+
+  Hostname : \n
+  TTY      : \l
+
+_EOF
+    fi
+
+    # /etc/issue.net
+    banner='/etc/issue.net'
+    if [ -f "$banner" ]; then
+        cat >"$banner" <<'_EOF'
+_EOF
+    fi
+
+    # /etc/motd
+    banner='/etc/motd'
+    if [ -f "$banner" ]; then
+        cat >"$banner" <<'_EOF'
+_EOF
+    fi
+)
+
+## Configure APT
+
+sources_list='/etc/apt/sources.list'
+if [ "$distro" = 'debian' ]; then
+    ## Create /etc/apt/sources.list with $apt_url
+
+    cat >"$sources_list" <<_EOF
+# Network repositories residing at $apt_url
+
+deb $apt_url/debian $codename main contrib non-free
+#deb-src $apt_url/debian $codename main contrib non-free
+
+deb $apt_url/debian-security $codename/updates main contrib non-free
+#deb-src $apt_url/debian-security $codename/updates main contrib non-free
+
+#deb $apt_url/debian $codename-updates main contrib non-free
+#deb-src $apt_url/debian $codename-updates main contrib non-free
+
+#deb $apt_url/debian $codename-backports main contrib non-free
+#deb-src $apt_url/debian $codename-backports main contrib non-free
+_EOF
+
+    ## Create /etc/apt/apt/conf.d/9a-check-valid-until to ignore Release file expiry
+
+    # This is required to keep apt-get(8) working for archived releases whose
+    # Release file no longer maintained (e.g. ones hosted by global CDN
+    # http://archive.debian.org). See apt.conf(5) for more info.
+
+    apt_conf_d_9a_check_valid_until='/etc/apt/apt.conf.d/9a-check-valid-until'
+
+    cat >"$apt_conf_d_9a_check_valid_until" <<_EOF
+// Disable Release file expiry checks
+Acquire::Check-Valid-Until $new_distro;
+_EOF
+fi # [ "$distro" = 'debian' ]
+
+## Add interfaces.d in /etc/network for ifupdown
+
+interfaces='/etc/network/interfaces'
+if [ -f "$interfaces" ]; then
+    interfaces_d="$interfaces.d"
+    if [ ! -d "$interfaces_d" ]; then
+        install -d "$interfaces_d"
+    fi
+
+    if ! grep -q "^source\(-directory\)\?[ \t]\+$interfaces_d" "$interfaces"; then
+        cat >"$interfaces" <<_EOF
+# Source interfaces configuration
+source $interfaces_d/*
+_EOF
+    fi
+fi
+
+## Create /etc/depmod.d (see depmod.d(8) for more information)
+
+depmod_d='/etc/depmod.d'
+[ -d "$depmod_d" ] || install -d "$depmod_d"
+
+## Make /bin/bash default login shell for new users, root and $user.
+
+if [ -e '/bin/bash' ]; then
+    # Use /bin/bash as default shell for useradd(8).
+    useradd_default='/etc/default/useradd'
+    if [ -f "$useradd_default" ]; then
+        sed -i "$useradd_default" -e 's,^\(SHELL\)=.*$,\1=/bin/bash,g'
+    fi
+
+    # Make it root shell
+    if [ -d ~root ]; then
+        usermod -s '/bin/bash' root
+    fi
+
+    # Make it $user shell
+    if eval "d=~$user" && [ -d "$d" ]; then
+        usermod -s '/bin/bash' "$user"
+    fi
+fi
+
+## Set login shell session auto-logout after timeout
+
+shell_timeout='/etc/profile.d/shell-timeout.sh'
+if [ ! -f "$shell_timeout" ]; then
+    cat >"$shell_timeout" <<'_EOF'
+# Set non-X11 login shell session auto-logout after timeout
+[ -n "$DISPLAY" ] || export TMOUT=$((20 * 60))
+_EOF
+fi
+
+## Prefer IPv4 over IPv6
+
+#gai='/etc/gai.conf'
+#if [ -f "$gai" ]; then
+#    sed -i "$gai" -e 's,^#\(precedence[ \t]\+::ffff:0:0/96[ \t]\+100[ \t]*\)$,\1,g'
+#fi
+
+## Add fstab(5) entry to remount proc(5) with hidepid=2 and gid=proc options
+
+#if groupadd -rf proc; then
+#    # Not adding $user to group 'proc' by default.
+#    #usermod -a -G proc "$user"
+#
+#    fstab='/etc/fstab'
+#    sed -i "$fstab" \
+#        -e '/^[ \t]*\(#\|$\)/b' \
+#        -e '/[ \t]\+\/proc[ \t]\+[^ \t]\+[ \t]\+[^ \t]*\(hidepid\|gid\)/b' \
+#        -e 's#\([ \t]\+\/proc[ \t]\+[^ \t]\+[ \t]\+\)\([^ \t]\+\)#\1\2,hidepid=2,gid=proc#g'
+#    if ! grep -q '[ \t]\+/proc[ \t]\+.\+\(hidepid\|gid\)' "$fstab"; then
+#        echo 'proc /proc proc defaults,hidepid=2,gid=proc 0 0' >>"$fstab"
+#    fi
+#fi
+
+## Use as template to assign network device name based on it's MAC
+
+#persistent_net='/etc/udev/rules.d/70-persistent-net.rules.template'
+#if [ ! -f "$persistent_net" ]; then
+#	cat >"$persistent_net" <<'_EOF'
+### Example rule to rename network devices
+##SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="00:de:ad:be:ff:00", ATTR{dev_id}=="0x0", ATTR{type}=="1", KERNEL=="eth*", NAME="en0"
+#_EOF
+#fi
+
+## Add sysctl(8) hardening settings from Ubuntu 16.04 LTS procps package
+
+sysctl_d='/etc/sysctl.d/10-console-messages.conf'
+if [ ! -e "$sysctl_d" ]; then
+    cat >"$sysctl_d" <<'_EOF'
+
+# the following stops low-level messages on console
+kernel.printk = 4 4 1 7
+_EOF
+fi
+
+sysctl_d='/etc/sysctl.d/10-ipv6-privacy.conf'
+if [ ! -e "$sysctl_d" ]; then
+    cat >"$sysctl_d" <<'_EOF'
+# IPv6 Privacy Extensions (RFC 4941)
+# ---
+# IPv6 typically uses a device's MAC address when choosing an IPv6 address
+# to use in autoconfiguration. Privacy extensions allow using a randomly
+# generated IPv6 address, which increases privacy.
+#
+# Acceptable values:
+#    0 - don’t use privacy extensions.
+#    1 - generate privacy addresses
+#    2 - prefer privacy addresses and use them over the normal addresses.
+net.ipv6.conf.all.use_tempaddr = 2
+net.ipv6.conf.default.use_tempaddr = 2
+_EOF
+fi
+
+sysctl_d='/etc/sysctl.d/10-kernel-hardening.conf'
+if [ ! -e "$sysctl_d" ]; then
+    cat >"$sysctl_d" <<'_EOF'
+# These settings are specific to hardening the kernel itself from attack
+# from userspace, rather than protecting userspace from other malicious
+# userspace things.
+#
+#
+# When an attacker is trying to exploit the local kernel, it is often
+# helpful to be able to examine where in memory the kernel, modules,
+# and data structures live. As such, kernel addresses should be treated
+# as sensitive information.
+#
+# Many files and interfaces contain these addresses (e.g. /proc/kallsyms,
+# /proc/modules, etc), and this setting can censor the addresses. A value
+# of "0" allows all users to see the kernel addresses. A value of "1"
+# limits visibility to the root user, and "2" blocks even the root user.
+kernel.kptr_restrict = 1
+
+# Also prevent unprivileged users from reading kernel messages ring buffer.
+kernel.dmesg_restrict = 1
+_EOF
+fi
+
+sysctl_d='/etc/sysctl.d/10-link-restrictions.conf'
+if [ ! -e "$sysctl_d" ]; then
+    cat >"$sysctl_d" <<'_EOF'
+# These settings eliminate an entire class of security vulnerability:
+# time-of-check-time-of-use cross-privilege attacks using guessable
+# filenames (generally seen as "/tmp file race" vulnerabilities).
+fs.protected_hardlinks = 1
+fs.protected_symlinks = 1
+_EOF
+fi
+
+sysctl_d='/etc/sysctl.d/10-lxd-inotify.conf'
+if [ ! -e "$sysctl_d" ]; then
+    cat >"$sysctl_d" <<'_EOF'
+# Increase the user inotify instance limit to allow for about
+# 100 containers to run before the limit is hit again
+fs.inotify.max_user_instances = 1024
+_EOF
+fi
+
+sysctl_d='/etc/sysctl.d/10-magic-sysrq.conf'
+if [ ! -e "$sysctl_d" ]; then
+    cat >"$sysctl_d" <<'_EOF'
+# The magic SysRq key enables certain keyboard combinations to be
+# interpreted by the kernel to help with debugging. The kernel will respond
+# to these keys regardless of the current running applications.
+#
+# In general, the magic SysRq key is not needed for the average Ubuntu
+# system, and having it enabled by default can lead to security issues on
+# the console such as being able to dump memory or to kill arbitrary
+# processes including the running screen lock.
+#
+# Here is the list of possible values:
+#   0 - disable sysrq completely
+#   1 - enable all functions of sysrq
+#  >1 - enable certain functions by adding up the following values:
+#          2 - enable control of console logging level
+#          4 - enable control of keyboard (SAK, unraw)
+#          8 - enable debugging dumps of processes etc.
+#         16 - enable sync command
+#         32 - enable remount read-only
+#         64 - enable signalling of processes (term, kill, oom-kill)
+#        128 - allow reboot/poweroff
+#        256 - allow nicing of all RT tasks
+#
+#   For example, to enable both control of console logging level and
+#   debugging dumps of processes: kernel.sysrq = 10
+#
+kernel.sysrq = 176
+_EOF
+fi
+
+sysctl_d='/etc/sysctl.d/10-network-security.conf'
+if [ ! -e "$sysctl_d" ]; then
+    cat >"$sysctl_d" <<'_EOF'
+
+# Turn on Source Address Verification in all interfaces to
+# prevent some spoofing attacks.
+net.ipv4.conf.default.rp_filter=1
+net.ipv4.conf.all.rp_filter=1
+
+# Turn on SYN-flood protections.  Starting with 2.6.26, there is no loss
+# of TCP functionality/features under normal conditions.  When flood
+# protections kick in under high unanswered-SYN load, the system
+# should remain more stable, with a trade off of some loss of TCP
+# functionality/features (e.g. TCP Window scaling).
+net.ipv4.tcp_syncookies=1
+_EOF
+fi
+
+sysctl_d='/etc/sysctl.d/10-ptrace.conf'
+if [ ! -e "$sysctl_d" ]; then
+    cat >"$sysctl_d" <<'_EOF'
+# The PTRACE system is used for debugging.  With it, a single user process
+# can attach to any other dumpable process owned by the same user.  In the
+# case of malicious software, it is possible to use PTRACE to access
+# credentials that exist in memory (re-using existing SSH connections,
+# extracting GPG agent information, etc).
+#
+# A PTRACE scope of "0" is the more permissive mode.  A scope of "1" limits
+# PTRACE only to direct child processes (e.g. "gdb name-of-program" and
+# "strace -f name-of-program" work, but gdb's "attach" and "strace -fp $PID"
+# do not).  The PTRACE scope is ignored when a user has CAP_SYS_PTRACE, so
+# "sudo strace -fp $PID" will work as before.  For more details see:
+# https://wiki.ubuntu.com/SecurityTeam/Roadmap/KernelHardening#ptrace
+#
+# For applications launching crash handlers that need PTRACE, exceptions can
+# be registered by the debugee by declaring in the segfault handler
+# specifically which process will be using PTRACE on the debugee:
+#   prctl(PR_SET_PTRACER, debugger_pid, 0, 0, 0);
+#
+# In general, PTRACE is not needed for the average running Ubuntu system.
+# To that end, the default is to set the PTRACE scope to "1".  This value
+# may not be appropriate for developers or servers with only admin accounts.
+kernel.yama.ptrace_scope = 1
+_EOF
+fi
+
+sysctl_d='/etc/sysctl.d/10-zeropage.conf'
+if [ ! -e "$sysctl_d" ]; then
+    cat >"$sysctl_d" <<'_EOF'
+# Protect the zero page of memory from userspace mmap to prevent kernel
+# NULL-dereference attacks against potential future kernel security
+# vulnerabilities.  (Added in kernel 2.6.23.)
+#
+# While this default is built into the Ubuntu kernel, there is no way to
+# restore the kernel default if the value is changed during runtime; for
+# example via package removal (e.g. wine, dosemu).  Therefore, this value
+# is reset to the secure default each time the sysctl values are loaded.
+vm.mmap_min_addr = 65536
+_EOF
+fi
+
+## Create sane default iptables rules on Debian and Debian-based distros
+
+iptables_dir='/etc/iptables'
+if [ -d "$iptables_dir" ]; then
+    iptables_rules_v4="$iptables_dir/rules.v4"
+    if [ ! -s "$iptables_rules_v4" ]; then
+        cat >"$iptables_rules_v4" <<'_EOF'
+# sample configuration for iptables service
+*filter
+:INPUT ACCEPT [0:0]
+:FORWARD ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+-A INPUT -i lo -j ACCEPT
+-A INPUT -p icmp -j ACCEPT
+-A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+-A INPUT -p tcp -m conntrack --ctstate NEW -m tcp --dport 22 -j ACCEPT
+-A INPUT -j REJECT --reject-with icmp-host-prohibited
+-A FORWARD -j REJECT --reject-with icmp-host-prohibited
+COMMIT
+_EOF
+    fi
+
+    iptables_rules_v6="$iptables_dir/rules.v6"
+    if [ ! -s "$iptables_rules_v6" ]; then
+        cat >"$iptables_rules_v6" <<'_EOF'
+# sample configuration for ip6tables service
+*filter
+:INPUT ACCEPT [0:0]
+:FORWARD ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+-A INPUT -i lo -j ACCEPT
+-A INPUT -p ipv6-icmp -j ACCEPT
+-A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+-A INPUT -p tcp -m conntrack --ctstate NEW -m tcp --dport 22 -j ACCEPT
+-A INPUT -j REJECT --reject-with icmp6-adm-prohibited
+-A FORWARD -j REJECT --reject-with icmp6-adm-prohibited
+COMMIT
+_EOF
+    fi
+fi
+
+## Add postfix(1) service confguration
+
+postfix_main_cf='/etc/postfix/main.cf'
+if [ ! -f "$postfix_main_cf" ]; then
+    cat >"$postfix_main_cf" <<'_EOF'
+# Global Postfix configuration file.  This file lists only a small subset
+# of all parameters.  For the syntax, and for a complete parameter list,
+# see the postconf(5) manual page.  For a commented and more complete
+# version of this file see /usr/share/postfix/main.cf.dist
+
+## Common parameters
+myorigin = $myhostname
+mydestination = 
+	$myhostname,
+	localhost, localhost.localdomain
+mynetworks = 127.0.0.0/8, [::ffff:127.0.0.0]/104
+inet_interfaces = loopback-only
+#relayhost = [<x_relayhost>]
+notify_classes = resource, software
+
+strict_rfc821_envelopes = yes
+disable_vrfy_command = yes
+
+enable_long_queue_ids = yes
+
+# Local domain mail delivery
+alias_database = hash:/etc/aliases
+alias_maps = hash:/etc/aliases
+
+# Size limits
+header_size_limit = 32768
+message_size_limit = 3145728
+bounce_size_limit = 20480
+mime_nesting_limit = 128
+body_checks_size_limit = 51200
+mailbox_size_limit = 52428800
+
+# Address verification
+address_verify_map = btree:/var/lib/postfix/verify
+address_verify_sender = postmaster@$myhostname
+address_verify_positive_expire_time = 31d
+address_verify_positive_refresh_time = 7d
+address_verify_negative_cache = yes
+address_verify_negative_expire_time = 3d
+address_verify_negative_refresh_time = 3h
+
+# Rate control time unit
+anvil_rate_time_unit = 60s
+
+## SMTP client configuration
+
+# TLS support
+smtp_tls_security_level = none
+
+# SASL support
+smtp_sasl_auth_enable = no
+
+# Timeouts
+smtp_connect_timeout = 20s
+smtp_helo_timeout = 180s
+smtp_mail_timeout = 180s
+smtp_rcpt_timeout = 180s
+smtp_data_init_timeout = 180s
+smtp_data_done_timeout = 600s
+smtp_data_xfer_timeout = 180s
+smtp_quit_timeout = 180s
+smtp_rset_timeout = 180s
+smtp_xforward_timeout = 180s
+
+## SMTP server contiguration
+
+# TLS support
+smtpd_tls_security_level = none
+
+# SASL support
+smtpd_sasl_auth_enable = no
+
+# Timeouts
+smtpd_timeout = 120s
+
+# Restrictions
+smtpd_reject_unlisted_recipient = yes
+smtpd_client_restrictions = 
+	reject_invalid_helo_hostname
+	permit_inet_interfaces
+	reject_non_fqdn_sender
+	reject_non_fqdn_recipient
+	permit_mynetworks
+	reject_unauth_destination
+	reject_non_fqdn_helo_hostname
+	reject_unknown_helo_hostname
+	reject_unknown_client_hostname
+
+smtpd_sender_restrictions = 
+	reject_unknown_sender_domain
+	reject_unverified_sender
+	permit_auth_destination
+	reject_unknown_recipient_domain
+
+smtpd_recipient_restrictions = 
+	permit_inet_interfaces
+	permit_mynetworks
+	reject_unauth_destination
+
+smtpd_data_restrictions = 
+	reject_unauth_pipelining
+	reject_multi_recipient_bounce
+
+# Error limit
+smtpd_soft_error_limit = 5
+smtpd_hard_error_limit = 10
+smtpd_junk_command_limit = 20
+smtpd_error_sleep_time = 2
+
+# Message rate control
+smtpd_client_connection_rate_limit = 120
+smtpd_client_message_rate_limit = 128
+smtpd_client_recipient_rate_limit = 60
+
+# Misc
+smtpd_banner = $myhostname ESMTP
+smtpd_helo_required = yes
+smtpd_client_port_logging = yes
+_EOF
+fi
+
+## openssh client and server configurations
+
+# sshd_config
+sshd_config='/etc/ssh/sshd_config'
+cat >"$sshd_config" <<'_EOF'
+#	$OpenBSD: sshd_config,v 1.100 2016/08/15 12:32:04 naddy Exp $
+
+# This is the sshd server system-wide configuration file.  See
+# sshd_config(5) for more information.
+
+### General settings
+
+# Network settings
+Port					22
+AddressFamily				any
+ListenAddress				0.0.0.0
+ListenAddress				::
+
+# Logging
+SyslogFacility				AUTH
+LogLevel				INFO
+
+# Pid file
+PidFile					/var/run/sshd.pid
+
+### Ciphers, Key exchange, MACs
+
+# Host Key settings
+#HostKeyAlgorithms			ssh-rsa (new)
+HostKey					/etc/ssh/ssh_host_rsa_key
+
+# Kex, Ciphers and MACs
+KexAlgorithms				diffie-hellman-group-exchange-sha256
+Ciphers					aes128-ctr,aes256-ctr
+MACs					hmac-sha2-256,hmac-sha2-512
+
+### Authentication
+
+AllowGroups				root users
+PermitRootLogin				without-password
+PermitEmptyPasswords			no
+StrictModes				yes
+UsePAM					yes
+
+AuthorizedKeysFile			.ssh/authorized_keys
+
+# Non-interactive methods
+PubkeyAuthentication			yes
+#PubkeyAcceptedKeyTypes			ssh-rsa (new)
+
+HostbasedAuthentication			no
+#HostbasedAcceptedKeyTypes		ssh-rsa (new)
+#HostbasedUsesNameFromPacketOnly	no
+#IgnoreRHosts				yes
+#IgnoreUserKnownHosts			yes
+
+# Interactive methods
+PasswordAuthentication			yes
+ChallengeResponseAuthentication		no
+#KbdInteractiveAuthentication		no
+
+# GSSAPI
+GSSAPIAuthentication			no
+#GSSAPICleanupCredentials		yes
+#GSSAPIStrictAcceptorCheck		yes
+#GSSAPIKeyExchange			no
+#GSSAPIEnablek5users			no
+
+# Kerberos
+KerberosAuthentication			no
+#KerberosGetAFSToken			no
+#KerberosOrLocalPasswd			yes
+#KerberosTicketCleanup			yes
+
+### Client connection settings
+
+# Text appended to protocol banner
+#DebianBanner				no
+#VersionAddendum			none
+
+# Not use DNS to resolve client IP and hostname
+UseDNS					no
+
+# Connection ratelimiting and timeout settings
+LoginGraceTime				60
+MaxStartups				10:30:100
+MaxAuthTries				2
+MaxSessions				10
+
+# Session start settings
+Banner					none
+PrintMotd				no
+PrintLastLog				yes
+ChrootDirectory				none
+PermitUserEnvironment			no
+#PermitUserRC				yes
+
+# Forwarding settings
+AllowAgentForwarding			yes
+AllowTcpForwarding			yes
+#AllowStreamLocalForwarding		yes (new)
+GatewayPorts				no
+PermitOpen				any
+PermitTunnel				no
+X11Forwarding				yes
+X11DisplayOffset			10
+X11UseLocalhost				yes
+
+# Keep alive settings
+TCPKeepAlive				no
+ClientAliveCountMax			3
+ClientAliveInterval			15
+
+# Compression settings
+Compression				no
+
+# Rekey session (symmenric) key settings
+#RekeyLimit				default 1h (new)
+
+# Enable SFTP subsystem
+Subsystem			sftp	internal-sftp
+
+# Accept locale environment variables
+AcceptEnv				LANG LANGUAGE LC_ADDRESS LC_ALL LC_COLLATE LC_CTYPE
+AcceptEnv				LC_IDENTIFICATION LC_MEASUREMENT LC_MESSAGES LC_MONETARY
+AcceptEnv				LC_NAME LC_NUMERIC LC_PAPER LC_TELEPHONE LC_TIME
+
+### Customize settings per entity
+
+# Permit sftp only access in chrooted environment for sftp group members
+Match Group sftp
+	# Force SFTP only access
+	ForceCommand			internal-sftp
+
+	# No forwarding when no shell access
+	AllowAgentForwarding		no
+	AllowTcpForwarding		no
+	#AllowStreamLocalForwarding	no (new)
+	X11Forwarding			no
+
+	# Chroot user to home directory (must be root owned)
+	ChrootDirectory			/home
+_EOF
+
+# fix permissions on server config file
+chmod 0600 "$sshd_config"
+
+# add 'sftp' system group
+groupadd -rf sftp ||:
+
+# Not adding $user to 'users' group to prevent remote logins until
+# password is changed from installation known.
+#usermod -a -G users "$user"
+
+# ssh_config
+ssh_config='/etc/ssh/ssh_config'
+cat >"$ssh_config" <<'_EOF'
+#	$OpenBSD: ssh_config,v 1.30 2016/02/20 23:06:23 sobrado Exp $
+
+# This is the ssh client system-wide configuration file.  See
+# ssh_config(5) for more information.  This file provides defaults for
+# users, and the values can be changed in per-user configuration files
+# or on the command line.
+
+# Configuration data is parsed as follows:
+#  1. command line options
+#  2. user-specific file
+#  3. system-wide file
+# Any configuration value is only changed the first time it is set.
+# Thus, host-specific definitions should be at the beginning of the
+# configuration file, and defaults at the end.
+
+# Site-wide defaults for some commonly used options.  For a comprehensive
+# list of available options, their meanings and defaults, please see the
+# ssh_config(5) man page.
+
+# Host *
+#   ForwardAgent no
+#   ForwardX11 no
+#   RhostsRSAAuthentication no
+#   RSAAuthentication yes
+#   PasswordAuthentication yes
+#   HostbasedAuthentication no
+#   GSSAPIAuthentication no
+#   GSSAPIDelegateCredentials no
+#   GSSAPIKeyExchange no
+#   GSSAPITrustDNS no
+#   BatchMode no
+#   CheckHostIP yes
+#   AddressFamily any
+#   ConnectTimeout 0
+#   StrictHostKeyChecking ask
+#   IdentityFile ~/.ssh/identity
+#   IdentityFile ~/.ssh/id_rsa
+#   IdentityFile ~/.ssh/id_dsa
+#   IdentityFile ~/.ssh/id_ecdsa
+#   IdentityFile ~/.ssh/id_ed25519
+#   Port 22
+#   Protocol 2
+#   Cipher 3des
+#   Ciphers aes128-ctr,aes192-ctr,aes256-ctr,arcfour256,arcfour128,aes128-cbc,3des-cbc
+#   MACs hmac-md5,hmac-sha1,umac-64@openssh.com,hmac-ripemd160
+#   EscapeChar ~
+#   Tunnel no
+#   TunnelDevice any:any
+#   PermitLocalCommand no
+#   VisualHostKey no
+#   ProxyCommand ssh -q -W %h:%p gateway.example.com
+#   RekeyLimit 1G 1h
+#
+# Uncomment this if you want to use .local domain
+# Host *.local
+#   CheckHostIP no
+
+Host *
+	# If this option is set to yes then remote X11 clients will have full access
+	# to the original X11 display. As virtually no X11 client supports the untrusted
+	# mode correctly we set this to yes.
+	ForwardX11Trusted yes
+
+	AddressFamily			any
+	Port				22
+	Protocol			2
+
+	# Authentication
+	RhostsRSAAuthentication		no
+	RSAAuthentication		no
+	PasswordAuthentication		yes
+	PubkeyAuthentication		yes
+	HostbasedAuthentication		no
+	ChallengeResponseAuthentication	yes
+	KbdInteractiveAuthentication	yes
+	GSSAPIAuthentication		yes
+	GSSAPIDelegateCredentials	no
+
+	# Connection
+	TCPKeepAlive			no
+	ServerAliveInterval		15
+	ServerAliveCountMax		3
+	StrictHostKeyChecking		ask
+	VerifyHostKeyDNS		ask
+	CheckHostIP			yes
+	VisualHostKey			no
+	HashKnownHosts			yes
+
+	# Credentials
+	#IdentityFile			~/.ssh/identity
+	IdentityFile			~/.ssh/id_rsa
+	#IdentityFile			~/.ssh/id_dsa
+	#IdentityFile			~/.ssh/id_ecdsa
+	IdentityFile			~/.ssh/id_ed25519
+
+	## Host key algoritms
+	#HostKeyAlgorithms		ssh-rsa-cert-v01@openssh.com,ssh-rsa
+	## Key types accepted for hostbased authentication
+	#HostbasedKeyTypes		ssh-rsa-cert-v01@openssh.com,ssh-rsa
+	## Key types accepted for public key authentication
+	#PubkeyAcceptedKeyTypes		ssh-rsa-cert-v01@openssh.com,ssh-rsa
+
+	# Forwarding, tunnels, proxy etc.
+	ForwardAgent			no
+	ForwardX11			no
+	GatewayPorts			no
+	Tunnel				no
+	TunnelDevice			any:any
+	PermitLocalCommand		no
+	#ProxyCommand ssh -q -W %h:%p gateway.example.com
+
+	# Ciphers and keying for version 2
+	#RekeyLimit			default 1h (new)
+
+	# Kex, Ciphers and MACs configuration based on the information from the following sources:
+	#
+	#  1. Release notes
+	#       http://lists.mindrot.org/pipermail/openssh-unix-announce/2015-August/000122.html
+	#       http://lists.mindrot.org/pipermail/openssh-unix-announce/2015-August/000123.html
+	#       http://lists.mindrot.org/pipermail/openssh-unix-announce/2016-January/000124.html
+	#       http://lists.mindrot.org/pipermail/openssh-unix-announce/2016-February/000125.html
+	#       http://lists.mindrot.org/pipermail/openssh-unix-announce/2016-March/000127.html
+	#       http://lists.mindrot.org/pipermail/openssh-unix-announce/2016-August/000128.html
+	#       http://lists.mindrot.org/pipermail/openssh-unix-announce/2016-December/000129.html
+	#       http://lists.mindrot.org/pipermail/openssh-unix-announce/2017-March/000130.html
+	#       http://lists.mindrot.org/pipermail/openssh-unix-announce/2017-October/000131.html
+	#       http://lists.mindrot.org/pipermail/openssh-unix-announce/2018-April/000132.html
+	#  2. http://blog.djm.net.au/2013/11/chacha20-and-poly1305-in-openssh.html
+	#  3. https://weakdh.org/sysadmin.html
+	#  4. https://wiki.mozilla.org/Security/Guidelines/OpenSSH
+	#  5. http://lists.mindrot.org/pipermail/openssh-unix-announce/2015-August/000122.html
+	#  6. https://safecurves.cr.yp.to/
+	#
+	KexAlgorithms			diffie-hellman-group-exchange-sha256,diffie-hellman-group14-sha1
+	Ciphers				aes128-ctr,aes192-ctr,aes256-ctr
+	MACs				hmac-sha2-256,hmac-sha2-512,hmac-sha1
+
+	# Misc
+	BatchMode			no
+	EscapeChar			~
+	Compression			no
+	CompressionLevel		6
+
+	# Send locale-related environment variables
+	SendEnv LANG LC_CTYPE LC_NUMERIC LC_TIME LC_COLLATE LC_MONETARY LC_MESSAGES
+	SendEnv LC_PAPER LC_NAME LC_ADDRESS LC_TELEPHONE LC_MEASUREMENT
+	SendEnv LC_IDENTIFICATION LC_ALL LANGUAGE
+	SendEnv XMODIFIERS
+_EOF
+
+## Create XDG and other dirs in /etc/skel, ~$user and ~root
+
+# Usage: screenrc <home directory>
+screenrc()
+{
+    local d="$1"
+
+    eval "$(printf "$pkg_installed" 'screen')" || return 0
+
+    cat >"$d/.screenrc" <<'_EOF'
+# GNU Screen - main configuration file 
+# All other .screenrc files will source this file to inherit settings.
+# Author: Christian Wills - cwills.sys@gmail.com
+
+## Allow bold colors - necessary for some reason
+#attrcolor b ".I"
+
+## Tell screen how to set colors. AB = background, AF=foreground
+termcapinfo xterm 'Co#256:AB=\E[48;5;%dm:AF=\E[38;5;%dm'
+
+## Enables use of shift-PgUp and shift-PgDn
+#termcapinfo xterm|xterms|xs|rxvt ti@:te@
+
+## Erase background with current bg color
+#defbce "on"
+
+## Enable 256 color term
+#term xterm-256color
+
+# Cache 30000 lines for scroll back
+defscrollback 30000
+
+hardstatus alwayslastline 
+# Very nice tabbed colored hardstatus line
+hardstatus string '%{= Kd} %{= Kd}%-w%{= Kr}[%{= KW}%n %t%{= Kr}]%{= Kd}%+w %-= %{KG} %H%{KW}|%{KY}%S%{KW}|%D %M %d %Y%{= Kc} %C%A%{-}'
+
+# change command character from ctrl-a to ctrl-b (emacs users may want this)
+#escape ^Bb
+
+# Hide hardstatus: ctrl-a f
+bind f eval "hardstatus ignore"
+# Show hardstatus: ctrl-a F
+bind F eval "hardstatus alwayslastline"
+_EOF
+}
+
+mc_ini()
+{
+    local d="$1"
+
+    eval "$(printf "$pkg_installed" 'mc')" || return 0
+
+    d="$d/.config/mc"
+    [ -d "$d" ] || install -d "$d"
+
+    cat >"$d/ini" <<'_EOF'
+[Midnight-Commander]
+auto_save_setup=1
+use_internal_view=1
+use_internal_edit=1
+confirm_exit=1
+editor_tab_spacing=8
+editor_word_wrap_line_length=72
+editor_fill_tabs_with_spaces=0
+editor_return_does_auto_indent=1
+editor_fake_half_tabs=0
+editor_option_save_position=1
+editor_option_typewriter_wrap=0
+editor_edit_confirm_save=1
+editor_syntax_highlighting=1
+editor_visible_tabs=1
+editor_visible_spaces=1
+editor_group_undo=0
+
+[Layout]
+message_visible=0
+keybar_visible=1
+xterm_title=1
+command_prompt=1
+menubar_visible=0
+free_space=1
+horizontal_split=0
+vertical_equal=1
+horizontal_equal=1
+top_panel_size=1
+_EOF
+}
+
+for u in "$user" root; do
+    eval "d=~$u"
+    [ -d "$d" ] || continue
+    install -d -o "$u" -g "$u" \
+        "$d/.local" "$d/.local/share" \
+        "$d/.cache" "$d/.config" \
+        "$d/bin"||:
+    install -d -o "$u" -g "$u" -m0700 \
+        "$d/.ssh" \
+        "$d/tmp" ||:
+    screenrc "$d"
+    mc_ini "$d"
+done
+
+# $u is root
+d='/etc/skel'
+install -d -o "$u" -g "$u" \
+    "$d/.local" "$d/.local/share" \
+    "$d/.cache" "$d/.config" \
+    "$d/bin" ||:
+install -d -o "$u" -g "$u" -m0700 \
+    "$d/.ssh" \
+    "$d/tmp" ||:
+screenrc "$d"
+mc_ini "$d"
+
+## Exit successfuly
+exit 0

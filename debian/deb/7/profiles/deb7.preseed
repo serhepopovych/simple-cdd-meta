@@ -1,0 +1,11 @@
+
+# Archived releases does not follow oldstable/stable/testing/unstable
+# cdrom/mirror suite/codename semantics making impossible to find right
+# distro directory in archive (e.g. for security updates).
+d-i mirror/codename string wheezy
+d-i cdrom/codename string wheezy
+
+# Suppress dialog used to confirm already preseeded grub-install/bootdev
+# and possible overwrite by user.
+d-i grub-installer/with_other_os boolean false
+d-i grub-installer/only_debian boolean false

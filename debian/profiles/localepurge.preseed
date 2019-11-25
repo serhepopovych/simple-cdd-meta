@@ -1,0 +1,8 @@
+# Preseeding for localepurge
+localepurge localepurge/verbose boolean false
+localepurge localepurge/mandelete boolean true
+localepurge localepurge/nopurge multiselect en, en_US.UTF-8
+localepurge localepurge/dontbothernew boolean false
+localepurge localepurge/use-dpkg-feature boolean true
+localepurge localepurge/showfreedspace boolean true
+localepurge localepurge/quickndirtycalc boolean true

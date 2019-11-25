@@ -1,0 +1,36 @@
+[submodule "scripts"]
+	path = scripts
+	url = https://github.com/serhepopovych/simple-cdd-ext.git
+	branch = master
+[submodule "debian/deb/10/debian-installer"]
+	path = debian/deb/10/debian-installer
+	url = https://github.com/serhepopovych/debian-installer.git
+	branch = mydistro/buster
+[submodule "debian/deb/10/debian-cd"]
+	path = debian/deb/10/debian-cd
+	url = https://github.com/serhepopovych/debian-cd.git
+	branch = mydistro/buster
+[submodule "debian/deb/7/debian-installer"]
+	path = debian/deb/7/debian-installer
+	url = https://github.com/serhepopovych/debian-installer.git
+	branch = mydistro/wheezy
+[submodule "debian/deb/7/debian-cd"]
+	path = debian/deb/7/debian-cd
+	url = https://github.com/serhepopovych/debian-cd.git
+	branch = mydistro/stretch
+[submodule "debian/deb/8/debian-installer"]
+	path = debian/deb/8/debian-installer
+	url = https://github.com/serhepopovych/debian-installer.git
+	branch = mydistro/jessie
+[submodule "debian/deb/8/debian-cd"]
+	path = debian/deb/8/debian-cd
+	url = https://github.com/serhepopovych/debian-cd.git
+	branch = mydistro/buster
+[submodule "debian/deb/9/debian-installer"]
+	path = debian/deb/9/debian-installer
+	url = https://github.com/serhepopovych/debian-installer.git
+	branch = mydistro/stretch
+[submodule "debian/deb/9/debian-cd"]
+	path = debian/deb/9/debian-cd
+	url = https://github.com/serhepopovych/debian-cd.git
+	branch = mydistro/buster

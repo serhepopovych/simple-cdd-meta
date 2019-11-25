@@ -1,0 +1,12 @@
+
+# Debugging, profiling and tracing tools
+gdbserver
+
+strace
+lsof
+
+#linux-image-amd64-dbg
+#kdump-tools
+#kexec-tools
+#makedumpfile
+#crash

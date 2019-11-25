@@ -1,0 +1,56 @@
+
+#### Setup network
+
+# If you want the preconfiguration file to work on systems both with and
+# without a dhcp server, uncomment these lines.
+d-i netcfg/dhcp_failed note
+d-i netcfg/dhcp_options select Retry network autoconfiguration with a DHCP hostname
+
+#### Setup installation and security update sources
+
+## Note that for network installations using this CD/DVD as source
+## repository you need to loop mount it on HTTP server, pass URL
+## hostname part in mirror/http/hostname=<hostname> and URL path in
+## mirror/http/directory=<path> to linux image on command line.
+##
+## You also need to pass debian-installer/allow_unauthenticated=true
+## if repository contained on CD/DVD is unsigned (i.e. no Release.gpg
+## and/or InRelease files in repository).
+##
+## Note that for network installations using official network repos
+## you need only to pass mirror/http/hostname=deb.debian.org and
+## mirror/http/directory=/debian or hostname/path from nearest mirror
+## instead of CDN deb.debian.org (or archive.debian.org for archived
+## releases) and /debian.
+
+# Use a network mirror? To support installation when no network available
+# disable mirror setup and provide /etc/apt/sources.list in postinst script.
+d-i apt-setup/use_mirror boolean true
+# Stop choosing mirrors on first failure. Mirrors are verified at install time.
+d-i apt-setup/no_mirror boolean false
+d-i apt-setup/mirror/error select Ignore
+
+# If you select ftp, the mirror/country string does not need to be set.
+d-i mirror/protocol string http
+d-i mirror/country string manual
+#d-i mirror/http/hostname string deb.debian.org
+#d-i mirror/http/directory string /debian
+d-i mirror/http/proxy string
+
+# By default the installer requires that repositories be authenticated
+# using a known gpg key. This setting can be used to disable that
+# authentication. Warning: Insecure, not recommended.
+#d-i debian-installer/allow_unauthenticated boolean true
+
+# Select individual apt repositories
+d-i apt-setup/services-select multiselect security
+d-i apt-setup/security_host string deb.debian.org/debian-security
+
+#### Prepare installation from network
+
+# Most flexibly of all, this downloads a program and runs it. The program
+# can use commands such as debconf-set to manipulate the debconf database.
+# More than one script can be listed, separated by spaces.
+# Note that if the filenames are relative, they are taken from the same
+# directory as the preconfiguration file that runs them.
+d-i preseed/run string init.sh

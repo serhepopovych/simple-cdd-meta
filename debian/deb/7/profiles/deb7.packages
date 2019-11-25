@@ -1,0 +1,8 @@
+## Release specific packages
+
+# base
+btrfs-tools
+iproute
+
+# debug
+linux-tools

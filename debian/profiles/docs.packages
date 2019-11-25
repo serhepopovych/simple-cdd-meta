@@ -1,0 +1,12 @@
+
+# Help subsystem (man, info pages)
+groff-base
+
+info
+install-info
+
+manpages
+man-db
+manpages-dev
+
+#iproute-doc
