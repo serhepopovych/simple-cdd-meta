@@ -20,15 +20,59 @@ cp()
         fi
 
     # cp -a $extras_base_dir/. $TDIR/$CODENAME/CD1
-    elif [ -n "${extras_base_dir+x}" ] && [ -z "${all##*-a *$extras_base_dir/. *}" ]; then
+    elif [ -n "${extras_base_dir+x}" ] && \
+         [ -z "${all##*-a *$extras_base_dir/. *}" ]; then
         # Hook to adjust <profile>.extra paths for network setup
         local f
         for f in $extras_base_dir/./simple-cdd/*.extra; do
-            [ -r "$f" ] && sed -i "$f" -e 's/^scripts\///g' ||:
+            if [ -r "$f" ]; then
+                command sed -i "$f" -e 's/^scripts\///g' ||:
+            fi
         done
+
+        # Hook to adjust simple-cdd.templates profile names
+        f="$extras_dir/simple-cdd.templates"
+        if [ -r "$f" ]; then
+            command sed -i "$f" -e 's/^ \([^/]\+\/\)*\(.\+\):/ \2:/' ||:
+        fi
     fi
 
     command cp "$@"
+}
+
+# Usage: sed ...
+sed()
+{
+    if [ $# -eq 1 ]; then
+        local c val
+
+        local ifs="${IFS}"
+        IFS=','
+
+        # choices
+          if [ -n "${choices+x}" ] && \
+             [ "$1" = "s/CHOICES/$choices/g" ]; then
+            val=''
+            for c in $choices; do
+                val="${val},${c##*/}"
+            done
+            choices="${val#,}"
+            set -- "s/CHOICES/$choices/g"
+        # default_choices
+        elif [ -n "${default_choices+x}" ] && \
+             [ "$1" = "s/DEFAULTS/$default_choices/g" ]; then
+            val=''
+            for c in $default_choices; do
+                val="${val},${c##*/}"
+            done
+            default_choices="${val#,}"
+            set -- "s/DEFAULTS/$default_choices/g"
+        fi
+
+        IFS="${ifs}"
+    fi
+
+    command sed "$@"
 }
 
 . '/usr/share/simple-cdd/tools/build/debian-cd'
