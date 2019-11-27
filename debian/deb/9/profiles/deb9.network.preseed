@@ -44,7 +44,7 @@ d-i mirror/http/proxy string
 
 # Select individual apt repositories
 d-i apt-setup/services-select multiselect security
-d-i apt-setup/security_host string deb.debian.org/debian-security
+d-i apt-setup/security_host string deb.debian.org
 
 #### Prepare installation from network
 
