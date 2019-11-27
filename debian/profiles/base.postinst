@@ -448,18 +448,33 @@ deb $apt_url/debian-security $codename/updates main contrib non-free
 #deb-src $apt_url/debian $codename-backports main contrib non-free
 _EOF
 
-    ## Create /etc/apt/apt/conf.d/9a-check-valid-until to ignore Release file expiry
+    ## Remove or create 9a-check-valid-until to ignore Release file expiry
 
     # This is required to keep apt-get(8) working for archived releases whose
     # Release file no longer maintained (e.g. ones hosted by global CDN
     # http://archive.debian.org). See apt.conf(5) for more info.
 
-    apt_conf_d_9a_check_valid_until='/etc/apt/apt.conf.d/9a-check-valid-until'
-
-    cat >"$apt_conf_d_9a_check_valid_until" <<_EOF
+    f='/etc/apt/apt.conf.d/9a-check-valid-until'
+    if $new_distro; then
+        rm -f "$f" ||:
+    else
+        cat >"$f" <<_EOF
 // Disable Release file expiry checks
-Acquire::Check-Valid-Until $new_distro;
+Acquire::Check-Valid-Until false;
 _EOF
+    fi
+
+    ## Remove 9b-allow-insecure-repositories
+
+    # This enabled only temporary to allow installation from insecure
+    # (i.e. no Release.gpg and thus unsigned with PGP/GPG repository).
+    #
+    # Now we updated sources.list manually to point to main Debian
+    # repositories that are signed there is no reason on keeping this
+    # on production system.
+
+    f='/etc/apt/apt.conf.d/9b-allow-insecure-repositories'
+    rm -f "$f" ||:
 fi # [ "$distro" = 'debian' ]
 
 ## Add interfaces.d in /etc/network for ifupdown
