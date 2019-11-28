@@ -35,6 +35,26 @@ cp()
         if [ -r "$f" ]; then
             command sed -i "$f" -e 's/^ \([^/]\+\/\)*\(.\+\):/ \2:/' ||:
         fi
+
+        # Hook to unpack netboot.tar.gz to extras/ for CD1
+        local a
+        for a in $ARCHES; do
+            f="${custom_installer}/installer-${a}/current"
+            f="${f}/images/netboot/netboot.tar.gz"
+            if [ -r "$f" ]; then
+                # From debian-cd/tools/boot/$CODENAME/boot-x86
+                if [ "$a" = amd64 ]; then
+                   a="amd"
+                else
+                   a="386"
+                fi
+                a="${extras_base_dir}/install.${a}/netboot"
+                if mkdir -p "$a" && cd "$a"; then
+                    tar -zxf "$f"
+                    cd - >/dev/null
+                fi
+            fi
+        done
     fi
 
     command cp "$@"
