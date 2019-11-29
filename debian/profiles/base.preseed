@@ -108,7 +108,7 @@ d-i ethdetect/prompt_missing_firmware boolean true
 # Disable network configuration entirely. This is useful for cdrom
 # installations on non-networked devices where the network questions,
 # warning and long timeouts are a nuisance.
-d-i netcfg/enable boolean true
+#d-i netcfg/enable boolean true
 
 # netcfg will choose an interface that has link if possible. This makes it
 # skip displaying a list if there is more than one interface.
