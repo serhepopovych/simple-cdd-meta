@@ -301,7 +301,7 @@ base-config base-config/intro note
 base-config base-config/login note 
 
 # Disable CD/DVD repos.
-d-i apt-setup/disable-cdrom-entries boolean true
+#d-i apt-setup/disable-cdrom-entries boolean true
 
 # Skip next/failed CD/DVD/netinst image question.
 d-i apt-setup/cdrom/set-first boolean false
