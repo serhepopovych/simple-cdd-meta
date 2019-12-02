@@ -430,24 +430,6 @@ _EOF
 
 sources_list='/etc/apt/sources.list'
 if [ "$distro" = 'debian' ]; then
-    ## Create /etc/apt/sources.list with $apt_url
-
-    cat >"$sources_list" <<_EOF
-# Network repositories residing at $apt_url
-
-deb $apt_url/debian $codename main contrib non-free
-#deb-src $apt_url/debian $codename main contrib non-free
-
-deb $apt_url/debian-security $codename/updates main contrib non-free
-#deb-src $apt_url/debian-security $codename/updates main contrib non-free
-
-#deb $apt_url/debian $codename-updates main contrib non-free
-#deb-src $apt_url/debian $codename-updates main contrib non-free
-
-#deb $apt_url/debian $codename-backports main contrib non-free
-#deb-src $apt_url/debian $codename-backports main contrib non-free
-_EOF
-
     ## Remove or create 9a-check-valid-until to ignore Release file expiry
 
     # This is required to keep apt-get(8) working for archived releases whose

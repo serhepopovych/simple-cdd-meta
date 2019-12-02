@@ -108,7 +108,7 @@ d-i ethdetect/prompt_missing_firmware boolean true
 # Disable network configuration entirely. This is useful for cdrom
 # installations on non-networked devices where the network questions,
 # warning and long timeouts are a nuisance.
-d-i netcfg/enable boolean true
+#d-i netcfg/enable boolean true
 
 # netcfg will choose an interface that has link if possible. This makes it
 # skip displaying a list if there is more than one interface.
@@ -300,13 +300,29 @@ base-config base-config/intro note
 # Avoid the final message.
 base-config base-config/login note 
 
+#### Apt setup
+
 # Disable CD/DVD repos.
-d-i apt-setup/disable-cdrom-entries boolean true
+#d-i apt-setup/disable-cdrom-entries boolean true
 
 # Skip next/failed CD/DVD/netinst image question.
 d-i apt-setup/cdrom/set-first boolean false
 d-i apt-setup/cdrom/set-next boolean false
 d-i apt-setup/cdrom/set-failed boolean false
+
+# Use a network mirror?
+d-i apt-setup/use_mirror boolean true
+# Stop choosing mirrors on first failure. Mirrors are verified at install time.
+d-i apt-setup/no_mirror boolean false
+d-i apt-setup/mirror/error select Ignore
+
+# Select individual apt repositories
+#d-i apt-setup/services-select multiselect security
+
+# By default the installer requires that repositories be authenticated
+# using a known gpg key. This setting can be used to disable that
+# authentication. Warning: Insecure, not recommended.
+#d-i debian-installer/allow_unauthenticated boolean true
 
 #### Preseeding other packages
 
