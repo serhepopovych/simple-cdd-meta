@@ -1,12 +1,1 @@
-
-# If you want the preconfiguration file to work on systems both with and
-# without a dhcp server, uncomment these lines.
-d-i netcfg/dhcp_failed note
-d-i netcfg/dhcp_options select Retry network autoconfiguration with a DHCP hostname
-
-# Most flexibly of all, this downloads a program and runs it. The program
-# can use commands such as debconf-set to manipulate the debconf database.
-# More than one script can be listed, separated by spaces.
-# Note that if the filenames are relative, they are taken from the same
-# directory as the preconfiguration file that runs them.
-d-i preseed/run string init.sh
+../../7/profiles/deb7.network.preseed
