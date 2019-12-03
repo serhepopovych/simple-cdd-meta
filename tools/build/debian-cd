@@ -44,14 +44,23 @@ cp()
             if [ -r "$f" ]; then
                 # From debian-cd/tools/boot/$CODENAME/boot-x86
                 if [ "$a" = amd64 ]; then
-                   a="amd"
+                   n="amd"
                 else
-                   a="386"
+                   n="386"
                 fi
-                a="${extras_base_dir}/install.${a}/netboot"
-                if mkdir -p "$a" && cd "$a"; then
+                n="${extras_base_dir}/install.${n}/netboot"
+                if mkdir -p "$n" && cd "$n"; then
+                    # Unpack archive
                     tar -zxf "$f"
                     cd - >/dev/null
+                    # Add firmware
+                    if cd "$3"; then
+                        pax -L -x sv4cpio \
+                            -s'%firmware%/firmware%' \
+                            -w firmware |\
+                        gzip -c >>${n}/debian-installer/${a}/initrd.gz ||:
+                        cd - >/dev/null
+                    fi
                 fi
             fi
         done
