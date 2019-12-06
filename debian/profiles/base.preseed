@@ -86,7 +86,7 @@ d-i passwd/user-default-groups string audio cdrom video
 # removable media, such as a USB stick, or driver floppy.
 #
 # Skipping removable media as source of missing drivers.
-d-i hw-detect/load_media boolean false
+d-i hw-detect/load_media boolean true
 
 # Load missing firmware from removable media?
 #
