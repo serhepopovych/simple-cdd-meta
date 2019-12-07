@@ -86,7 +86,7 @@ d-i passwd/user-default-groups string audio cdrom video
 # removable media, such as a USB stick, or driver floppy.
 #
 # Skipping removable media as source of missing drivers.
-d-i hw-detect/load_media boolean false
+d-i hw-detect/load_media boolean true
 
 # Load missing firmware from removable media?
 #
@@ -128,6 +128,15 @@ d-i netcfg/get_hostname string setup
 d-i netcfg/get_domain string localdomain
 # to set the domain to empty:
 #d-i netcfg/get_domain string 
+
+# In isolated setup networks there might be no need in default route
+# and thus dhcp might be configured without it. Ignore question.
+d-i netcfg/no_default_route boolean false
+
+# If you want the preconfiguration file to work on systems both with and
+# without a dhcp server, uncomment these lines.
+d-i netcfg/dhcp_failed note
+d-i netcfg/dhcp_options select Do not configure the network at this time
 
 #### Partitioning
 

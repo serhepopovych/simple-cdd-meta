@@ -1,9 +1,4 @@
 
-# If you want the preconfiguration file to work on systems both with and
-# without a dhcp server, uncomment these lines.
-d-i netcfg/dhcp_failed note
-d-i netcfg/dhcp_options select Do not configure the network at this time
-
 # This will prevent the installer from ejecting the CD during the reboot,
 # if set to "false", which is useful in some situations.
 d-i cdrom-detect/eject boolean false
