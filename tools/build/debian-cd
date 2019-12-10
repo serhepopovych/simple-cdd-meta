@@ -104,4 +104,34 @@ sed()
     command sed "$@"
 }
 
+# Usage: make ...
+make()
+{
+    command make "$@"
+
+    if [ $# -ge 1 ]; then
+        # make image CD=1
+        if [ "$1" = "image" ]; then
+            # simple-cdd uses DEBVERSION to find ISO image: provide it
+            # with symlink pointing to new image that uses DEBVER
+            if [ -n "${DEBVER+x}" -a "$DEBVER" != "$DEBVERSION" ]; then
+                local out="$OUT"
+
+                local cdname="${CDNAME:-debian}"
+                local debver="$DEBVER"
+                local debversion="$DEBVERSION"
+                local archs="$(echo "$ARCHES" | sed -e 's/ /-/g')"
+                local disktype="${DISKTYPE:-DVD}"
+
+                local new="${cdname}-${debver}-${archs}-${disktype}-1.iso"
+                local old="${cdname}-${debversion}-${archs}-${disktype}-1.iso"
+
+                if [ -f "$out/$new" ]; then
+                    ln -sf "$new" "$out/$old"
+                fi
+            fi
+        fi
+    fi
+}
+
 . '/usr/share/simple-cdd/tools/build/debian-cd'
