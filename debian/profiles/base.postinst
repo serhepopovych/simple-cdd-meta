@@ -377,13 +377,6 @@ if [ -f "$tmp_mount" ]; then
     systemctl enable "${tmp_mount##*/}"
 fi
 
-## Disable ipmitool package modules-load.d(8) impievd.conf (fails when no hw)
-
-ipmievd_conf='/usr/lib/modules-load.d/ipmievd.conf'
-if [ -f "$ipmievd_conf" ]; then
-    ln -snf /dev/null "/etc/modules-load.d/${ipmievd_conf##*/}"
-fi
-
 ## Apply branding
 
 $(
@@ -510,39 +503,6 @@ if [ ! -f "$shell_timeout" ]; then
 [ -n "$DISPLAY" ] || export TMOUT=$((20 * 60))
 _EOF
 fi
-
-## Prefer IPv4 over IPv6
-
-#gai='/etc/gai.conf'
-#if [ -f "$gai" ]; then
-#    sed -i "$gai" -e 's,^#\(precedence[ \t]\+::ffff:0:0/96[ \t]\+100[ \t]*\)$,\1,g'
-#fi
-
-## Add fstab(5) entry to remount proc(5) with hidepid=2 and gid=proc options
-
-#if groupadd -rf proc; then
-#    # Not adding $user to group 'proc' by default.
-#    #usermod -a -G proc "$user"
-#
-#    fstab='/etc/fstab'
-#    sed -i "$fstab" \
-#        -e '/^[ \t]*\(#\|$\)/b' \
-#        -e '/[ \t]\+\/proc[ \t]\+[^ \t]\+[ \t]\+[^ \t]*\(hidepid\|gid\)/b' \
-#        -e 's#\([ \t]\+\/proc[ \t]\+[^ \t]\+[ \t]\+\)\([^ \t]\+\)#\1\2,hidepid=2,gid=proc#g'
-#    if ! grep -q '[ \t]\+/proc[ \t]\+.\+\(hidepid\|gid\)' "$fstab"; then
-#        echo 'proc /proc proc defaults,hidepid=2,gid=proc 0 0' >>"$fstab"
-#    fi
-#fi
-
-## Use as template to assign network device name based on it's MAC
-
-#persistent_net='/etc/udev/rules.d/70-persistent-net.rules.template'
-#if [ ! -f "$persistent_net" ]; then
-#	cat >"$persistent_net" <<'_EOF'
-### Example rule to rename network devices
-##SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="00:de:ad:be:ff:00", ATTR{dev_id}=="0x0", ATTR{type}=="1", KERNEL=="eth*", NAME="en0"
-#_EOF
-#fi
 
 ## Add sysctl(8) hardening settings from Ubuntu 16.04 LTS procps package
 
