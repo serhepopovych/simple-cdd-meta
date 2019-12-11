@@ -347,7 +347,7 @@ d-i apt-setup/mirror/error select Ignore
 dash dash/sh boolean false
 
 # postfix (configured by postinst script)
-postfix postfix/main_mailer_type select No configuration
+postfix postfix/main_mailer_type select Local only
 
 # iptables-persistent (configured by postinst script)
 iptables-persistent iptables-persistent/autosave_v4 boolean false
