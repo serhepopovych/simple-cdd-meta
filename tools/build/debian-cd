@@ -26,7 +26,7 @@ cp()
         local f
         for f in $extras_base_dir/./simple-cdd/*.extra; do
             if [ -r "$f" ]; then
-                command sed -i "$f" -e 's/^scripts\///g' ||:
+                command sed -i "$f" -e 's/^\(scripts\|profiles\(\/common\)\?\)\///g' ||:
             fi
         done
 
