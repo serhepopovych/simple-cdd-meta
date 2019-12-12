@@ -287,6 +287,10 @@ popularity-contest popularity-contest/participate boolean false
 
 ### Finishing up the installation
 
+# This will prevent the installer from ejecting the CD during the reboot,
+# if set to "false", which is useful in some situations.
+d-i cdrom-detect/eject boolean false
+
 # During installations from serial console, the regular virtual consoles
 # (VT1-VT6) are normally disabled in /etc/inittab. Uncomment the next
 # line to prevent this.

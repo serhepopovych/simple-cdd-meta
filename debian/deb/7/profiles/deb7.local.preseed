@@ -1,8 +1,4 @@
 
-# This will prevent the installer from ejecting the CD during the reboot,
-# if set to "false", which is useful in some situations.
-d-i cdrom-detect/eject boolean false
-
 # Most flexibly of all, this downloads a program and runs it. The program
 # can use commands such as debconf-set to manipulate the debconf database.
 # More than one script can be listed, separated by spaces.

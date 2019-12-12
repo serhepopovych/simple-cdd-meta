@@ -1,4 +1,0 @@
-## Additional udebs used by debian-installer
-
-# handle cdrom eject after install
-cdrom-detect
