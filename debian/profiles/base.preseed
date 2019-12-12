@@ -372,10 +372,6 @@ iptables-persistent iptables-persistent/autosave_v6 boolean false
 # here's a way to run any shell command you'd like inside the installer,
 # automatically.
 
-# This first command is run as early as possible, just after
-# preseeding is read. Note that it is set in default.preseed.
-#d-i preseed/early_command string /bin/true
-
 # More than one file can be listed, separated by spaces; all will be
 # loaded. The included files can have preseed/include directives of their
 # own as well. Note that if the filenames are relative, they are taken from
@@ -391,16 +387,3 @@ iptables-persistent iptables-persistent/autosave_v6 boolean false
 # preconfiguration files, includes those files.
 #d-i preseed/include_command \
 #      string if [ "`hostname`" = bob ]; then echo bob.cfg; fi
-
-# Most flexibly of all, this downloads a program and runs it. The program
-# can use commands such as debconf-set to manipulate the debconf database.
-# More than one script can be listed, separated by spaces.
-# Note that if the filenames are relative, they are taken from the same
-# directory as the preconfiguration file that runs them.
-#d-i preseed/run string foo.sh
-
-# This command is run just before the install finishes, but when there is
-# still a usable /target directory. You can chroot to /target and use it
-# directly, or use the apt-install and in-target commands to easily install
-# packages and run commands in the target system.
-#d-i preseed/late_command string /bin/true
