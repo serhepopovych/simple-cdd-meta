@@ -1,8 +1,0 @@
-# debs
-*.tar.gz
-*.buildinfo
-*.changes
-*.deb
-
-/images/
-/tmp/

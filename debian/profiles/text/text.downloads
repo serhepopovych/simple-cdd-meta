@@ -1,0 +1,29 @@
+
+# Shell helpers and text editors
+screen
+tmux
+
+mc
+mc-data
+
+nano
+
+vim-tiny
+vim-nox
+
+# Console helpers
+gpm
+vlock
+
+## Console web-browser, MUA and download agents
+#elinks
+#elinks-data
+#
+#mutt
+#
+#heirloom-mailx
+#biff
+#
+#rsync
+#
+#lftp

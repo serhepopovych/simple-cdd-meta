@@ -1,0 +1,25 @@
+#### Install simple-cdd-ext hooks
+
+# Most flexibly of all, this downloads a program and runs it. The program
+# can use commands such as debconf-set to manipulate the debconf database.
+# More than one script can be listed, separated by spaces.
+# Note that if the filenames are relative, they are taken from the same
+# directory as the preconfiguration file that runs them.
+d-i preseed/run string init.sh
+
+# This command is run immediately before the partitioner starts. It may be
+# useful to apply dynamic partitioner preseeding that depends on the state
+# of the disks (which may not be visible when preseed/early_command runs).
+d-i partman/early_command string /cdrom/simple-cdd/debian/partman/early_command.sh
+
+## These are configured by distro specific init2.sh helper
+
+# This first command is run as early as possible, just after
+# preseeding is read.
+#d-i preseed/early_command string /cdrom/simple-cdd/debian/early_command.sh
+
+# This command is run just before the install finishes, but when there is
+# still a usable /target directory. You can chroot to /target and use it
+# directly, or use the apt-install and in-target commands to easily install
+# packages and run commands in the target system.
+#d-i preseed/late_command string /cdrom/simple-cdd/debian/late_command.sh

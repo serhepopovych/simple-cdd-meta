@@ -1,0 +1,11 @@
+## Release specific packages
+
+# provides dbus-session-bus
+dbus-user-session
+
+# base
+btrfs-progs
+iproute2
+
+# debug
+linux-perf

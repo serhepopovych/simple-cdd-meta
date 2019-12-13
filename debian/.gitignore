@@ -1,0 +1,15 @@
+
+# debian-installer build artifacts
+*.tar.gz
+*.buildinfo
+*.build
+*.changes
+*.deb
+
+# build artifacts
+/*/*/images/
+/*/*/tmp/
+
+# profiles description file
+/*/*/profiles/*.description
+profiles/*/*.description

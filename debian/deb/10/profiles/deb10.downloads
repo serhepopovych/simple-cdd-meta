@@ -1,8 +1,0 @@
-## Release specific packages
-
-# base
-btrfs-progs
-iproute2
-
-# debug
-linux-perf
