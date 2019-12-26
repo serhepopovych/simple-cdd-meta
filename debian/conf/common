@@ -1,0 +1,56 @@
+#!/bin/sh
+
+#### Bootstrap
+
+# This snippet is
+if [ -n "$-" -a -z "${-##*a*}" ]; then
+    # sourced by simple-cdd build environment
+
+    # This is default path for build-simple-cdd(1) set by internal VARIABLES
+    # in python3/dist-packages/simple_cdd/variables.py.
+    simple_cdd_dir="${simple_cdd_dir:-$PWD}"
+
+    # Usage: include_deps <profile> [<profile_desc>] [<val>] ...
+    include_deps()
+    {
+        # Allow real profile configuration to be included
+        unset "__included_$(make_shell_var "$3")__"
+
+        # Order is important to set @profiles and @auto_profiles correctly
+        include "${path:+$path/../}./$3.conf"
+    }
+
+    if [ -z "${1:+x}" ]; then
+        echo >&2 'usage: . ./profiles/sh/common <profile> "" <val|profile>'
+        exit 1
+    fi
+
+    # Execute bootstrap code from distro specific config file
+    . "$simple_cdd_dir/profiles/groups/distro/debian.conf" "$@"
+else
+    # called by user directly
+
+    exec env -i \
+        ${PATH:+PATH="$PATH"} \
+        ${TERM:+TERM="$TERM"} \
+        ${LOGNAME:+LOGNAME="$LOGNAME"} \
+        ${USER:+USER="$USER"} \
+        ${USERNAME:+USERNAME="$USERNAME"} \
+        ${HOSTNAME:+HOSTNAME="$HOSTNAME"} \
+        ${HOME:+HOME="$HOME"} \
+        ${SHELL:+SHELL="$SHELL"} \
+        ${PWD:+PWD="$PWD"} \
+        ${MAIL:+MAIL="$MAIL"} \
+        ${LANG:+LANG="$LANG"} \
+        ${LANGUAGE:+LANGUAGE="$LANGUAGE"} \
+        ${LC_ALL:+LC_ALL="$LC_ALL"} \
+        ${LC_CTYPE:+LC_CTYPE="$LC_CTYPE"} \
+        build-simple-cdd "$@" --conf "./profiles/$this" ||
+    exit
+fi
+
+#### Profile configuration
+
+## Export profiles list
+
+profiles="${profiles}"
