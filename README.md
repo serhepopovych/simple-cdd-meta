@@ -61,8 +61,6 @@ is not implemented yet.
 ````
 for i in 7 8 9 10
 do
-    cd debian/deb/${i} &&
-    build-simple-cdd --conf profiles/deb${i}.conf &&
-    cd - >/dev/null || break
+    ./debian/deb/$i/profiles/minimal.sh
 done
 ````
