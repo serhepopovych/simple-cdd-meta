@@ -17,7 +17,7 @@ if [ -n "$-" -a -z "${-##*a*}" ]; then
         unset "__included_$(make_shell_var "$3")__"
 
         # Order is important to set @profiles and @auto_profiles correctly
-        include "${path:+$path/../}./$3.conf"
+        include_skip_profile_all "${path:+$path/../}./$3.conf"
     }
 
     if [ -z "${1:+x}" ]; then
@@ -50,7 +50,3 @@ else
 fi
 
 #### Profile configuration
-
-## Export profiles list
-
-profiles="${profiles}"
