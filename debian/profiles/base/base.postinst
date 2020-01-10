@@ -169,6 +169,15 @@ if [ -f "$grub2default" ]; then
             fi
         fi
 
+        # disable "Advanced options ..." submenu and put entries in main menu
+
+        if grep -q '^GRUB_DISABLE_SUBMENU=' "$grub2default"; then
+            # it is set by installer or by default in config
+            sed -i "$grub2default" -e 's,^\(GRUB_DISABLE_SUBMENU\)=.*,\1=y,g'
+        else
+            echo "GRUB_DISABLE_SUBMENU=y" >> "$grub2default"
+        fi
+
         update_grub=y
         break
     done
