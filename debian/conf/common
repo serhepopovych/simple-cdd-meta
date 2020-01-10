@@ -13,9 +13,6 @@ if [ -n "$-" -a -z "${-##*a*}" ]; then
     # Usage: include_deps <profile> [<profile_desc>] [<val>] ...
     include_deps()
     {
-        # Allow real profile configuration to be included
-        unset "__included_$(make_shell_var "$3")__"
-
         # Order is important to set @profiles and @auto_profiles correctly
         include_skip_profile_all "${path:+$path/../}./$3.conf"
     }
