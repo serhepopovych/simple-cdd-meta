@@ -15,6 +15,15 @@ if [ -n "$-" -a -z "${-##*a*}" ]; then
     {
         # Order is important to set @profiles and @auto_profiles correctly
         include_skip_profile_all "${path:+$path/../}./$3.conf"
+
+        # Make sure we agreed on profile name
+        if [ "$3" != "$profile" ]; then
+            echo >&2 "$1: build script ($3) and config ($profile) profile name mismatch"
+            exit 1
+        fi
+
+        # Instance specific temporary directory
+        export simple_cdd_temp="${simple_cdd_dir}/tmp/$3"
     }
 
     if [ -z "${1:+x}" ]; then
@@ -25,7 +34,7 @@ if [ -n "$-" -a -z "${-##*a*}" ]; then
     # Execute bootstrap code from distro specific config file
     . "$simple_cdd_dir/profiles/groups/distro/debian.conf" "$@"
 else
-    # called by user directly
+    # sourced by profile build script
 
     exec env -i \
         ${PATH:+PATH="$PATH"} \
