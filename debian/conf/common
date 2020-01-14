@@ -32,7 +32,7 @@ if [ -n "$-" -a -z "${-##*a*}" ]; then
     fi
 
     # Execute bootstrap code from distro specific config file
-    . "$simple_cdd_dir/profiles/groups/distro/debian.conf" "$@"
+    . "$simple_cdd_dir/profiles/groups/distro.conf" "$@"
 else
     # sourced by profile build script
 
