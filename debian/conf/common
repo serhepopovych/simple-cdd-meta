@@ -10,24 +10,24 @@ if [ -n "$-" -a -z "${-##*a*}" ]; then
     # in python3/dist-packages/simple_cdd/variables.py.
     simple_cdd_dir="${simple_cdd_dir:-$PWD}"
 
-    # Usage: include_deps <profile> [<profile_desc>] [<val>] ...
+    # Usage: include_deps <group> <profile> [<profile_desc>] ...
     include_deps()
     {
         # Order is important to set @profiles and @auto_profiles correctly
-        include_skip_profile_all "${path:+$path/../}./$3.conf"
+        include_skip_profile_all "${path:+$path/../}./$2.conf"
 
         # Make sure we agreed on profile name
-        if [ "$3" != "$profile" ]; then
-            echo >&2 "$1: build script ($3) and config ($profile) profile name mismatch"
+        if [ "$2" != "$profile" ]; then
+            echo >&2 "$1: build script ($2) and config ($profile) profile name mismatch"
             exit 1
         fi
 
         # Instance specific temporary directory
-        export simple_cdd_temp="${simple_cdd_dir}/tmp/$3"
+        export simple_cdd_temp="${simple_cdd_dir}/tmp/$2"
     }
 
     if [ -z "${1:+x}" ]; then
-        echo >&2 'usage: . ./profiles/sh/common <profile> "" <val|profile>'
+        echo >&2 'usage: . ./profiles/sh/common <group> <profile> [<profile_desc>]'
         exit 1
     fi
 
