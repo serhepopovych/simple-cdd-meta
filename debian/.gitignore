@@ -13,3 +13,4 @@
 # profiles description file
 /*/*/profiles/*.description
 profiles/*/*.description
+profiles/distro.description
