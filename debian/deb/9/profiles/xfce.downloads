@@ -1,0 +1,13 @@
+
+## Packages that provide dependencies
+
+# required by libnet-ssleay-perl
+perl-openssl-defaults
+
+# required by python-cryptography
+python-cffi-backend
+
+# required by xserver-xorg
+xserver-xorg-input-all
+
+libreoffice-style-galaxy
