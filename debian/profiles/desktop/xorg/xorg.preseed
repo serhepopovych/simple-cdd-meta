@@ -1,0 +1,2 @@
+# You can choose to install contrib software.
+d-i apt-setup/contrib boolean true

@@ -1,0 +1,35 @@
+
+## Internet
+
+# Mozilla Firefox
+firefox-esr
+
+# The Chromium Browser
+#chromium
+
+# Java Network Launching Protocol (JNLP)
+icedtea-netx
+
+# Mozilla Thunderbird
+#thunderbird
+#enigmail
+#or
+evolution
+
+# Pidgin
+pidgin
+pidgin-otr
+#and (
+#xchat
+#or
+#hexchat
+#)
+
+# VoIP
+linphone
+
+# FTP protocol client(s)
+filezilla
+
+# BitTorrent protocol client(s)
+transmission-gtk

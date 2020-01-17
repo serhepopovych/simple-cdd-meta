@@ -1,0 +1,3 @@
+# For PulseAudio meta-media-pulse is needed
+mate-media-gstreamer
+mate-settings-daemon-gstreamer
