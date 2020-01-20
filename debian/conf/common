@@ -37,20 +37,20 @@ else
     # sourced by profile build script
 
     exec env -i \
-        ${PATH:+PATH="$PATH"} \
-        ${TERM:+TERM="$TERM"} \
-        ${LOGNAME:+LOGNAME="$LOGNAME"} \
-        ${USER:+USER="$USER"} \
-        ${USERNAME:+USERNAME="$USERNAME"} \
-        ${HOSTNAME:+HOSTNAME="$HOSTNAME"} \
-        ${HOME:+HOME="$HOME"} \
-        ${SHELL:+SHELL="$SHELL"} \
-        ${PWD:+PWD="$PWD"} \
-        ${MAIL:+MAIL="$MAIL"} \
-        ${LANG:+LANG="$LANG"} \
-        ${LANGUAGE:+LANGUAGE="$LANGUAGE"} \
-        ${LC_ALL:+LC_ALL="$LC_ALL"} \
-        ${LC_CTYPE:+LC_CTYPE="$LC_CTYPE"} \
+        ${PATH+PATH="$PATH"} \
+        ${TERM+TERM="$TERM"} \
+        ${LOGNAME+LOGNAME="$LOGNAME"} \
+        ${USER+USER="$USER"} \
+        ${USERNAME+USERNAME="$USERNAME"} \
+        ${HOSTNAME+HOSTNAME="$HOSTNAME"} \
+        ${HOME+HOME="$HOME"} \
+        ${SHELL+SHELL="$SHELL"} \
+        ${PWD+PWD="$PWD"} \
+        ${MAIL+MAIL="$MAIL"} \
+        ${LANG+LANG="$LANG"} \
+        ${LANGUAGE+LANGUAGE="$LANGUAGE"} \
+        ${LC_ALL+LC_ALL="$LC_ALL"} \
+        ${LC_CTYPE+LC_CTYPE="$LC_CTYPE"} \
         build-simple-cdd "$@" --conf "./profiles/$this" ||
     exit
 fi
