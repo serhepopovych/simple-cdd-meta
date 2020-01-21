@@ -22,6 +22,12 @@ if [ -n "$-" -a -z "${-##*a*}" ]; then
             exit 1
         fi
 
+        # Make directory early
+        mkdir -p "$simple_cdd_dir"
+
+        # Flush defs file contents from previous run if any
+        :>"$simple_cdd_dir/defs"
+
         # Instance specific temporary directory
         export simple_cdd_temp="${simple_cdd_dir}/tmp/$2"
     }
