@@ -36,6 +36,9 @@ if [ -n "$-" -a -z "${-##*a*}" ]; then
 else
     # sourced by profile build script
 
+    # Make sure to update adjacent code in profile_env() from
+    # distro specific config (e.g. distro.conf) when modifying
+    # list of included variables here.
     exec env -i \
         ${PATH+PATH="$PATH"} \
         ${TERM+TERM="$TERM"} \
