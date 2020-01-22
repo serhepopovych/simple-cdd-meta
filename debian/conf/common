@@ -38,7 +38,7 @@ if [ -n "$-" -a -z "${-##*a*}" ]; then
     fi
 
     # Execute bootstrap code from distro specific config file
-    . "$simple_cdd_dir/profiles/groups/distro.conf" "$@"
+    . "$simple_cdd_dir/profiles/sh/bootstrap" "$@"
 else
     # sourced by profile build script
 
