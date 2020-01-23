@@ -3,7 +3,7 @@
 # This snippet is
 if [ -n "$-" -a -z "${-##*a*}" ]; then
     # sourced by simple-cdd build environment
-    set -- 'mate-desktop-sh' 'mate-desktop'
+    set -- '.' 'mate-desktop-sh' 'mate-desktop'
 else
     # called by user directly
     this="${0##*/}"

@@ -3,7 +3,7 @@
 # This snippet is
 if [ -n "$-" -a -z "${-##*a*}" ]; then
     # sourced by simple-cdd build environment
-    set -- 'xfce-desktop-sh' 'xfce-desktop'
+    set -- '.' 'xfce-desktop-sh' 'xfce-desktop'
 else
     # called by user directly
     this="${0##*/}"

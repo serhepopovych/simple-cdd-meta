@@ -3,7 +3,7 @@
 # This snippet is
 if [ -n "$-" -a -z "${-##*a*}" ]; then
     # sourced by simple-cdd build environment
-    set -- 'minimal-sh' 'minimal'
+    set -- '.' 'minimal-sh' 'minimal'
 else
     # called by user directly
     this="${0##*/}"
