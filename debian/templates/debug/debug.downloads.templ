@@ -1,0 +1,20 @@
+
+/* Debugging, profiling and tracing tools */
+gdbserver
+
+strace
+lsof
+
+#if version < 10
+linux-tools
+#else
+linux-perf
+#endif
+
+#if 0
+linux-image-amd64-dbg
+kdump-tools
+kexec-tools
+makedumpfile
+crash
+#endif
