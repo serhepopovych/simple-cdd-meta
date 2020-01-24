@@ -1,1 +1,1 @@
-../../7/profiles/minimal.sh
+../templates/minimal.sh

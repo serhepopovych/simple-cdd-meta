@@ -1,1 +1,1 @@
-../../8/profiles/cinnamon-desktop.sh
+../templates/cinnamon-desktop.sh

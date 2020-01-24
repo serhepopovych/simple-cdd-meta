@@ -10,10 +10,10 @@
 /*/*/images/
 /*/*/tmp/
 
-# profiles description file
-/*/*/profiles/*.description
-profiles/*/*.description
-profiles/distro.description
+/*/*/profiles/*
+/*/*/profiles/groups
+!/*/*/profiles/sh
+!/*/*/profiles/*.sh
 
 # defines file
 /*/*/defs

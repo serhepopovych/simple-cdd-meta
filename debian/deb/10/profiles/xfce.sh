@@ -1,1 +1,1 @@
-../../7/profiles/xfce.sh
+../templates/xfce.sh

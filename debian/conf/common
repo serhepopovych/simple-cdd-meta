@@ -13,6 +13,62 @@ if [ -n "$-" -a -z "${-##*a*}" ]; then
     # Usage: include_deps <dir> <group> <profile> [<profile_desc>] ...
     include_deps()
     {
+        # Usage: do_fetch <src> <mode> <wget args>
+        do_fetch()
+        {
+            local func="${FUNCNAME:-do_fetch}"
+
+            local src="${1:?missing 1st arg to ${func}() <src>}"
+            shift
+            local mode="$1"
+            shift
+
+            # Find output target
+            local a quiet='/dev/stderr' dst=''
+            for a in "$@" ''; do
+                case "$a" in
+                    -O) dst='/' ;;
+                    -q) [ "$dst" != '/' ] || dst='/dev/null'; quiet='/dev/null' ;;
+                     *)  [ "$dst" != '/' ] || dst="$a" ;;
+                esac
+            done
+            dst="${dst:-/dev/stdout}"
+
+            # Make sure directory tree exists
+            mkdir -p "${dst%/*}" ||:
+
+            # Fetch entry
+            local rc=0
+
+            # Skip if src and dst are the same
+            [ "$src" -ef "$dst" ] || cp -d "$src" "$dst" 2>"$quiet" || rc=$?
+
+            if [ $rc -eq 0 ]; then
+                local i o
+
+                src="${src%/*}"
+                dst="${dst%/*}"
+
+                # Make stubs to let build-simple-cdd(1) add them to file list
+                for i in "$src"/*.*; do
+                    # Skip non-readable files
+                    [ -r "$i" ] || continue
+
+                    o="${i%.templ}"
+                    o="$dst/${o##*/}"
+
+                    # Skip if destination exists or broken symlink
+                    [ ! -e "$o" -a ! -L "$o" ] || continue
+
+                    :>"$o"
+                done
+            else
+                echo >&2 "profiles/sh/common: fetching \"$src\" to \"$dst\" failed"
+            fi
+
+            return $rc
+        }
+
         # Order is important to set @profiles and @auto_profiles correctly
         include_skip_profile_all "${path:+$rootdir/$1/}./$3.conf"
 

@@ -1,1 +1,1 @@
-../../7/profiles/mate.sh
+../templates/mate.sh

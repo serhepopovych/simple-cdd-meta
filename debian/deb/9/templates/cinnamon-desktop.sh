@@ -1,0 +1,1 @@
+../../8/templates/cinnamon-desktop.sh
