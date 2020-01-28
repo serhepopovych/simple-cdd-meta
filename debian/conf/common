@@ -93,6 +93,23 @@ if [ -n "$-" -a -z "${-##*a*}" ]; then
         exit 1
     fi
 
+    # Remove all but build snippets like one we sourced from
+    profiles_cleanup()
+    {
+        local e
+
+        for e in "$simple_cdd_dir/profiles"/* \
+                 "$simple_cdd_dir/profiles"/.* \
+                 #
+        do
+            case "${e##*/}" in
+                '.'|'..'|'sh') continue ;;
+            esac
+            [ -z "${e%%*.sh}" ] || rm -rf "$e" ||:
+        done
+    }
+    profiles_cleanup
+
     # Execute bootstrap code from distro specific config file
     . "$simple_cdd_dir/profiles/sh/bootstrap" "$@"
 else
