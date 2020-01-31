@@ -86,6 +86,8 @@ if [ -n "$-" -a -z "${-##*a*}" ]; then
 
         # Instance specific temporary directory
         export simple_cdd_temp="${simple_cdd_dir}/tmp/$3"
+        # Instance specific local packages
+        export local_packages="$simple_cdd_dir/packages/$3"
     }
 
     if [ -z "${1:+x}" ]; then
