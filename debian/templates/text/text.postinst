@@ -66,6 +66,7 @@ bind F eval "hardstatus alwayslastline"
 _EOF
 }
 
+# Usage: mc_ini <home directory>
 mc_ini()
 {
     local d="$1"
