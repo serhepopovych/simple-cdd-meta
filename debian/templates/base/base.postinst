@@ -263,7 +263,7 @@ if [ -f "$ipxe_lkrn" -o -f "$ipxe_efi" ]; then
 
 set -e
 
-. /usr/lib/grub/grub-mkconfig_lib
+. /usr/share/grub/grub-mkconfig_lib
 
 # iPXE is only supported on x86
 case $(uname -m) in
@@ -283,14 +283,14 @@ if test -e "$IPXE" ; then
   IPXEPATH=$( make_system_path_relative_to_its_root "$IPXE" )
   echo "Found iPXE image: $IPXE" >&2
   if [ -d /sys/firmware/efi ]; then
-    cat << EOF
+    cat <<EOF
 menuentry "Network boot (iPXE)" --users "" --class network {
 ${prepare_boot_cache}
 	chainloader $IPXEPATH
 }
 EOF
   else
-    cat << EOF
+    cat <<EOF
 menuentry "Network boot (iPXE)" --users "" --class network {
 ${prepare_boot_cache}
 	linux16 $IPXEPATH
