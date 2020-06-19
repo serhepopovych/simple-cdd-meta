@@ -432,13 +432,13 @@ _EOF
 
 sources_list='/etc/apt/sources.list'
 if [ "$distro" = 'debian' ]; then
-    ## Remove or create 9a-check-valid-until to ignore Release file expiry
+    ## Remove or create 99CheckValidUntil to ignore Release file expiry
 
     # This is required to keep apt-get(8) working for archived releases whose
     # Release file no longer maintained (e.g. ones hosted by global CDN
     # http://archive.debian.org). See apt.conf(5) for more info.
 
-    f='/etc/apt/apt.conf.d/9a-check-valid-until'
+    f='/etc/apt/apt.conf.d/99CheckValidUntil'
     if $new_distro; then
         rm -f "$f" ||:
     else
@@ -448,7 +448,7 @@ Acquire::Check-Valid-Until false;
 _EOF
     fi
 
-    ## Remove 9b-allow-insecure-repositories
+    ## Remove 99AllowInsecureRepositories
 
     # This enabled only temporary to allow installation from insecure
     # (i.e. no Release.gpg and thus unsigned with PGP/GPG repository).
@@ -457,7 +457,7 @@ _EOF
     # repositories that are signed there is no reason on keeping this
     # on production system.
 
-    f='/etc/apt/apt.conf.d/9b-allow-insecure-repositories'
+    f='/etc/apt/apt.conf.d/99AllowInsecureRepositories'
     rm -f "$f" ||:
 fi # [ "$distro" = 'debian' ]
 
