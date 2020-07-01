@@ -22,6 +22,7 @@ scripts/debian/partman/btrfs/1GB
 scripts/debian/partman/btrfs/2GB
 scripts/debian/partman/btrfs/3GB
 scripts/debian/partman/btrfs/5GB
+scripts/debian/partman/btrfs/8GB
 scripts/debian/partman/btrfs/10GB
 scripts/debian/partman/btrfs/20GB
 scripts/debian/partman/btrfs/default
