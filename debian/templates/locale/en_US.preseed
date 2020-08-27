@@ -12,25 +12,16 @@ d-i debian-installer/locale string en_US.UTF-8
 
 #### Console/Keyboard setup
 
-# keyboard configuration
-keyboard-configuration keyboard-configuration/xkb-keymap select us
-keyboard-configuration keyboard-configuration/layout select us
-keyboard-configuration keyboard-configuration/variant select English (US)
+# keyboard configuration based on debian-installer/locale or preseeded here
+#keyboard-configuration keyboard-configuration/xkb-keymap select us
+#keyboard-configuration keyboard-configuration/layout select us
+#keyboard-configuration keyboard-configuration/variant select English (US)
 
 # don't mess with the keymap
-console-common console-data/keymap/policy select Don't touch keymap
-console-data console-data/keymap/policy select Don't touch keymap
+#console-common console-data/keymap/policy select Don't touch keymap
+#console-data console-data/keymap/policy select Don't touch keymap
 
-# keyboard layouts
-console-common console-data/keymap/family select qwerty
-console-data console-data/keymap/family select qwerty
-console-data console-data/keymap/qwerty/layout select US american
-
-# console configuration
-console-setup console-setup/store_defaults_in_debconf_db boolean false
-# keep boot/kernel font
-console-setup console-setup/fontface47 select Do not change the boot/kernel font
-# character set to support
-console-setup console-setup/codeset47 select Guess optimal character set
-# use UTF-8 console
-console-setup console-setup/charmap47 select UTF-8
+# keyboard layouts based on policy above
+#console-common console-data/keymap/family select qwerty
+#console-data console-data/keymap/family select qwerty
+#console-data console-data/keymap/qwerty/layout select US american
