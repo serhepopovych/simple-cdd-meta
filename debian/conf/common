@@ -81,7 +81,8 @@ if [ -n "$-" -a -z "${-##*a*}" ]; then
         # Make directory early
         mkdir -p "$simple_cdd_dir"
 
-        # Flush defs file contents from previous run if any
+        # Flush stds and defs files contents from previous run if any
+        :>"$simple_cdd_dir/stds"
         :>"$simple_cdd_dir/defs"
 
         # Instance specific temporary directory

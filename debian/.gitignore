@@ -15,5 +15,7 @@
 !/*/*/profiles/sh
 !/*/*/profiles/*.sh
 
-# defines file
+# stds file
+/*/*/stds
+# defs file
 /*/*/defs
