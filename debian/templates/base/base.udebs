@@ -5,3 +5,4 @@ cryptsetup-udeb
 openssh-client-udeb
 strace-udeb
 dmidecode-udeb
+fdisk-udeb
