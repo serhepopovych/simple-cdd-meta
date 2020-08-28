@@ -1,0 +1,7 @@
+#### Time zone setup
+
+# Many countries have only one time zone. If you told the installer you're
+# in one of those countries, you can choose its standard time zone via this
+# question.
+#base-config tzconfig/choose_country_zone_single boolean true
+d-i time/zone string Europe/Uzhgorod

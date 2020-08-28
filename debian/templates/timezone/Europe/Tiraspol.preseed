@@ -4,4 +4,4 @@
 # in one of those countries, you can choose its standard time zone via this
 # question.
 #base-config tzconfig/choose_country_zone_single boolean true
-#d-i time/zone string Etc/UTC
+d-i time/zone string Europe/Tiraspol
