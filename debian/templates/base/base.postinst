@@ -70,13 +70,25 @@ eval $(
 
 ## Define package manager command that checks if package installed
 
-if type rpm >/dev/null 2>&1; then
-    pkg_installed="rpm -qi %s >/dev/null 2>&1"
-elif type dpkg >/dev/null 2>&1; then
-    pkg_installed="dpkg -s %s >/dev/null 2>&1"
-else
-    pkg_installed=false
-fi
+# Usage: pkg_is_installed <pkg_name>
+pkg_is_installed()
+{
+    local func="${FUNCNAME:-pkg_is_installed}"
+
+    local pkg_name="${1:?missing 1st arg to ${func}() <pkg_name>}"
+
+    if [ -z "${pkg_is_installed__cmd-}" ]; then
+        if type rpm >/dev/null 2>&1; then
+            pkg_is_installed__cmd='rpm -qi'
+        elif type dpkg >/dev/null 2>&1; then
+            pkg_is_installed__cmd='dpkg -s'
+        else
+            pkg_is_installed__cmd='false'
+        fi
+    fi
+
+    $pkg_is_installed__cmd "$pkg_name" >/dev/null 2>&1 || return
+}
 
 ## Configure grub2 theme; support it on both "serial" and "console"; fix iPXE support on EFI
 
@@ -136,8 +148,8 @@ if [ -f "$grub2default" ]; then
     }
 
     for g in pc efi-x64 efi-amd64 efi-ia32; do
-        eval "$(printf "$pkg_installed" "grub2-$g")" ||
-        eval "$(printf "$pkg_installed" "grub-$g")" ||
+        pkg_is_installed "grub2-$g" ||
+        pkg_is_installed "grub-$g" ||
             continue
 
         # enable both serial and regular console
