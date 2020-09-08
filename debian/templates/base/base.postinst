@@ -324,7 +324,11 @@ if [ -n "$update_grub" ]; then
     elif type update-grub >/dev/null 2>&1; then
         update-grub
     else
-        grub2-mkconfig -o '/boot/grub2/grub.cfg'
+        f="$(readlink '/etc/grub2.cfg' 2>/dev/null)" &&
+            [ -n "$f" ] ||
+        f='/boot/grub2/grub.cfg'
+
+        grub2-mkconfig -o "$f"
     fi
 fi
 
