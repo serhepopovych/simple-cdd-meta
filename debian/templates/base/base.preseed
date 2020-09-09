@@ -167,8 +167,8 @@ d-i partman/confirm_nooverwrite boolean true
 
 # We are going to use expert partitioning method.
 d-i partman-basicmethods/method_only boolean false
-# Use default filesystem (btrfs) for partitions
-d-i partman/default_filesystem string btrfs
+# Use default filesystem (ext4) for partitions
+d-i partman/default_filesystem string ext4
 # Use "cylinder" alignment on systems where optimal causes problems (e.g. buggy BIOS)
 d-i partman/alignment select optimal
 
