@@ -12,13 +12,25 @@ false() { ! :; }
 
 ## Define package manager command that checks if package installed
 
-if type rpm >/dev/null 2>&1; then
-    pkg_installed="rpm -qi %s >/dev/null 2>&1"
-elif type dpkg >/dev/null 2>&1; then
-    pkg_installed="dpkg -s %s >/dev/null 2>&1"
-else
-    pkg_installed=false
-fi
+# Usage: pkg_is_installed <pkg_name>
+pkg_is_installed()
+{
+    local func="${FUNCNAME:-pkg_is_installed}"
+
+    local pkg_name="${1:?missing 1st arg to ${func}() <pkg_name>}"
+
+    if [ -z "${pkg_is_installed__cmd-}" ]; then
+        if type rpm >/dev/null 2>&1; then
+            pkg_is_installed__cmd='rpm -qi'
+        elif type dpkg >/dev/null 2>&1; then
+            pkg_is_installed__cmd='dpkg -s'
+        else
+            pkg_is_installed__cmd='false'
+        fi
+    fi
+
+    $pkg_is_installed__cmd "$pkg_name" >/dev/null 2>&1 || return
+}
 
 ## Create XDG and other dirs in /etc/skel, ~$user and ~root
 
@@ -27,7 +39,7 @@ screenrc()
 {
     local d="$1"
 
-    eval "$(printf "$pkg_installed" 'screen')" || return 0
+    pkg_is_installed 'screen' || return 0
 
     cat >"$d/.screenrc" <<'_EOF'
 # GNU Screen - main configuration file
@@ -71,7 +83,7 @@ mc_ini()
 {
     local d="$1"
 
-    eval "$(printf "$pkg_installed" 'mc')" || return 0
+    pkg_is_installed 'mc' || return 0
 
     d="$d/.config/mc"
     [ -d "$d" ] || install -d "$d"
