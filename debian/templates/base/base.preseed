@@ -12,6 +12,9 @@ console-setup console-setup/codeset47 select Guess optimal character set
 # use UTF-8 console
 console-setup console-setup/charmap47 select UTF-8
 
+# keyboard configuration
+keyboard-configuration keyboard-configuration/variant select English (US)
+
 #### Time zone setup
 
 # Controls whether or not the hardware clock is set to UTC.
