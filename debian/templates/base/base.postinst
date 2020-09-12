@@ -337,6 +337,10 @@ fi
 boot_boot='/boot/boot'
 [ -e "$boot_boot" ] || ln -snf . "$boot_boot"
 
+## Make sure /etc/mtab is a symlink to /proc/mounts
+
+[ -L '/etc/mtab' ] || ln -snf '/proc/mounts' '/etc/mtab'
+
 ## Enable agetty(8) on serial console
 
 if [ -n "$grub_serial_tty" ]; then
