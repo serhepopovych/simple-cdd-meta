@@ -207,6 +207,40 @@ fi
 
 systemd_unit_enable 'acpid.service' ||:
 
+## Make ssh host keys generated on first boot
+
+f="$systemd_lib_unit/ssh-keygen.service"
+
+if [ ! -f "$f" ]; then
+    f="$systemd_etc_unit/ssh-keygen.service"
+
+    if [ ! -f "$f" ]; then
+        # Idea is from sshd-keygen.service from CentOS 7.x
+        cat >"$f" <<'_EOF'
+[Unit]
+Description=OpenSSH Server Key Generation
+ConditionFileNotEmpty=|!/etc/ssh/ssh_host_rsa_key
+ConditionFileNotEmpty=|!/etc/ssh/ssh_host_dsa_key
+ConditionFileNotEmpty=|!/etc/ssh/ssh_host_ecdsa_key
+ConditionFileNotEmpty=|!/etc/ssh/ssh_host_ed25519_key
+Before=ssh.service ssh.socket
+
+[Service]
+ExecStart=/usr/bin/ssh-keygen -A
+Type=oneshot
+RemainAfterExit=yes
+
+[Install]
+WantedBy=basic.target
+_EOF
+    fi
+fi
+
+# Remove hostkeys and enable service
+rm -f /etc/ssh/ssh_host_*_key \
+      /etc/ssh/ssh_host_*_key.pub ||:
+systemd_unit_enable "${f##*/}"
+
 ## Enable tmpfs for /tmp
 
 f="$systemd_etc_unit/tmp.mount"
