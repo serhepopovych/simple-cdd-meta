@@ -96,12 +96,12 @@ for u in "$user" root; do
     eval "d=~$u"
     [ -d "$d" ] || continue
     install -d -o "$u" -g "$u" \
-        "$d/.local" "$d/.local/share" \
-        "$d/.cache" "$d/.config" \
-        "$d/bin"||:
+        "$d/.local" "$d/.local/share" "$d/.local/bin" \
+        "$d/.cache" "$d/.config"
     install -d -o "$u" -g "$u" -m0700 \
         "$d/.ssh" \
-        "$d/tmp" ||:
+        "$d/tmp"
+    ln -sf '.local/bin' "$d/bin"
     screenrc "$d"
     mc_ini "$d"
 done
@@ -109,12 +109,12 @@ done
 # $u is root
 d='/etc/skel'
 install -d -o "$u" -g "$u" \
-    "$d/.local" "$d/.local/share" \
-    "$d/.cache" "$d/.config" \
-    "$d/bin" ||:
+    "$d/.local" "$d/.local/share" "$d/.local/bin" \
+    "$d/.cache" "$d/.config"
 install -d -o "$u" -g "$u" -m0700 \
     "$d/.ssh" \
-    "$d/tmp" ||:
+    "$d/tmp"
+ln -sf '.local/bin' "$d/bin"
 screenrc "$d"
 mc_ini "$d"
 
