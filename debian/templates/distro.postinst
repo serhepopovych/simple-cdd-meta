@@ -129,6 +129,56 @@ pkg_is_installed()
     $pkg_is_installed__cmd "$pkg_name" >/dev/null 2>&1 || return
 }
 
+## Shell-style file handling helpers
+
+if by="${0##*/}" && [ -n "${by##*bash*}" ]; then
+    by="by $by"
+else
+    by='by distro.postinst'
+fi
+
+# Usage: shell_var_replace <file> <opt> <val>
+shell_var_replace()
+{
+    local func="${FUNCNAME:-shell_var_replace}"
+
+    local file="${1:?missing 1st arg to ${func}() <file>}"
+    local opt="${2:?missing 2d arg to ${func}() <opt>}"
+    local val="${3:?missing 3rd arg to ${func}() <val>}"
+
+    if [ -f "$file" ]; then
+        local o="$opt"
+        opt="${opt#\#}"
+
+        sed -i "$file" \
+            -e "s/^\s*$opt=/#commented $by#&/" \
+            -e "\$a\\
+
+#replaced $by#\\
+$o=\"$val\"" \
+            #
+    fi
+}
+
+# Usage: shell_var_extend() <file> <opt> <val>
+shell_var_extend()
+{
+    local func="${FUNCNAME:-shell_var_extend}"
+
+    local file="${1:?missing 1st arg to ${func}() <file>}"
+    local opt="${2:?missing 2d arg to ${func}() <opt>}"
+    local val="${3:?missing 3rd arg to ${func}() <val>}"
+
+    if [ -f "$file" ]; then
+        local o="$opt"
+        opt="${opt#\#}"
+
+        echo >>"$file"
+        echo >>"$file" "#extended $by#"
+        echo >>"$file" "$o=\"\${$opt:+\$$opt }$val\""
+    fi
+}
+
 ## Initial setup based on distro
 
 eval $(
