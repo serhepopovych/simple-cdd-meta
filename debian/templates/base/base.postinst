@@ -199,33 +199,33 @@ boot_boot='/boot/boot'
 
 if [ -n "$grub_serial_tty" ]; then
     # systemctl(1) fails with old systemd (e.g. on Debian GNU/Linux 7.x (wheezy))
-    ln -snf '/lib/systemd/system/serial-getty@.service' \
-            "/etc/systemd/system/getty.target.wants/serial-getty@$grub_serial_tty.service" ||:
+    ln -snf "$systemd_lib_unit/serial-getty@.service" \
+            "$systemd_etc_unit/getty.target.wants/serial-getty@$grub_serial_tty.service" ||:
 fi
 
 ## Enable acpid(8) service by default to handle PWRBTN action
 
-systemctl enable acpid.service ||:
+systemd_unit_enable 'acpid.service' ||:
 
 ## Enable tmpfs for /tmp
 
-tmp_mount='/etc/systemd/system/tmp.mount'
+f="$systemd_etc_unit/tmp.mount"
 
-if [ ! -f "$tmp_mount" ]; then
-    for tmp_mount_share in \
-        '/usr/lib/systemd/system/tmp.mount' \
+if [ ! -f "$f" ]; then
+    for g in \
+        "$systemd_lib_unit/tmp.mount" \
         '/usr/share/systemd/tmp.mount' \
-        ''
+        #
     do
-       if [ -f "$tmp_mount_share" ]; then
-           install -Dm0644 "$tmp_mount_share" "$tmp_mount" ||:
+       if [ -f "$g" ]; then
+           install -D -m 0644 "$g" "$f" || continue
            break
        fi
     done
 
-    if [ -z "$tmp_mount_share" ]; then
+    if [ ! -f "$f" ]; then
         # From Ubuntu 16.04 LTS
-        cat >"$tmp_mount" <<'_EOF'
+        cat >"$f" <<'_EOF'
 #  This file is part of systemd.
 #
 #  systemd is free software; you can redistribute it and/or modify it
@@ -255,10 +255,11 @@ _EOF
     fi
 fi
 
-if [ -f "$tmp_mount" ]; then
-    sed -i "$tmp_mount" -e 's,^\(Options\)=\(.*\)$,\1=\2\,size=25%,g'
-    systemctl enable "${tmp_mount##*/}"
-fi
+# Limit tmpfs size to 25% of total ram
+sed -i "$f" \
+    -e 's,^\(Options\)=\(.*\)$,\1=\2\,size=25%,g' \
+    #
+systemd_unit_enable "${f##*/}"
 
 ## Apply branding
 

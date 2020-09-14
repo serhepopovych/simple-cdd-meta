@@ -179,6 +179,209 @@ shell_var_extend()
     fi
 }
 
+## Init manager helpers
+
+systemd_lib_unit='/lib/systemd/system'
+systemd_etc_unit='/etc/systemd/system'
+
+# Usage: systemd_unit_cleanup <unit1> <unit2> ...
+systemd_unit_cleanup()
+{
+    local func="${FUNCNAME:-systemd_unit_cleanup}"
+
+    local u="${systemd_unit:-$systemd_lib_unit}"
+    local p="${systemd_root-}/${u#/}"
+
+    # Supported systemd.unit(5) directives vary from version to version.
+    #
+    # If local package (e.g. openvpn) being installed provides unit
+    # file targeted more recent systemd(1) console is filled by systemd(1)
+    # with warnings about unsupported directives.
+    #
+    # This helper intended to cleanup specified units to keep them only
+    # with most common directives. Tested on Debian GNU/Linu 7.x (wheezy)
+    # and local packages (e.g. openvpn) from 10.x (buster).
+
+    local f
+    for f in "$@"; do
+        f="$p/$f"
+
+        if [ -f "$f" ]; then
+            sed -i "$f" \
+                -e '/^Documentation=/           s/^/#/' \
+                -e '/^Protect\(System\|Home\)=/ s/^/#/' \
+                -e '/^KillMode=/                s/^/#/' \
+                -e '/^Delegate=/                s/^/#/' \
+                -e '/^PartOf=/                  s/^/#/' \
+                -e '/^ReloadPropagatedFrom=/    s/^/#/' \
+                #
+
+            grep -q '^Type=oneshot' "$f" || continue
+
+            sed -i "$f" \
+                -e '/^ExecReload=/d' \
+                #
+        fi
+    done
+}
+
+# Usage: systemd_unit_get <section> <attribute> <unit1> <unit2> ...
+systemd_unit_get()
+{
+    local func="${FUNCNAME:-systemd_unit_get}"
+
+    local u="${systemd_unit:-$systemd_lib_unit}"
+    local p="${systemd_root-}/${u#/}"
+
+    local section="${1:?missing 1st arg to ${func}() <section>}"
+    local attribute="${2:?missing 2d arg to ${func}() <attribute>}"
+    shift 2
+
+    local f t=' '
+    for f in "$@"; do
+        [ -n "${t##* $f *}" ] || continue
+
+        t="$t$f "
+
+        f="$p/$f"
+        if [ -f "$f" ]; then
+            echo "$f"
+        fi
+    done | xargs sed -n -e "/\\[$section\\]/,/\\[/ s/^$attribute=//p"
+}
+
+# Usage: systemd_unit_list <section> <attribute> <unit1> <unit2> ...
+systemd_unit_list()
+{
+    local func="${FUNCNAME:-systemd_unit_list}"
+
+    local section="${1:?missing 1st arg to ${func}() <section>}"
+    local attribute="${2:?missing 2d arg to ${func}() <attribute>}"
+    shift 2
+
+    local e="${systemd_root-}/${systemd_etc_unit#/}"
+    local l="${systemd_root-}/${systemd_lib_unit#/}"
+
+    local f ifs
+
+    local tt=' '
+    local et=' ' et_dir="$systemd_etc_unit"
+    local lt=' ' lt_dir="$systemd_lib_unit"
+
+    for f in "$@"; do
+        f="${f##*/}"
+
+        [ -n "${tt##* $f *}" ] || continue
+
+          if [ -f "$e/$f" ]; then
+            et="$et$f "
+        elif [ -f "$l/$f" ]; then
+            lt="$lt$f "
+        else
+            continue
+        fi
+
+        tt="$tt$f "
+    done
+
+    for f in 'et' 'lt'; do
+        for f in \
+            $(
+                eval "
+                    export systemd_unit=\"\$${f}_dir\"
+                    systemd_unit_get \"\$section\" \"\$attribute\" \$${f}
+                "
+             )
+        do
+            [ -z "${tt##* $f *}" ] || tt="$tt$f "
+        done
+    done
+
+    echo $tt
+}
+
+# Usage: systemd_unit_enable <unit1> <unit2> ...
+systemd_unit_enable()
+{
+    local func="${FUNCNAME:-systemd_unit_enable}"
+
+    local u="${systemd_unit:-$systemd_etc_unit}"
+    local p="${systemd_root-}/${u#/}"
+    u="$systemd_lib_unit"
+
+    local rc=0
+
+    local f t
+    for f in $(systemd_unit_list 'Install' 'Also' "$@"); do
+        for t in $(systemd_unit_get 'Install' 'WantedBy' "$f"); do
+            t="$p/$t.wants"
+
+            install -d "$t" && ln -sf "$u/$f" "$t/$f" || rc=$((rc + $?))
+        done
+    done
+
+    return $rc
+}
+
+# Usage: systemd_unit_disable <unit1> <unit2> ...
+systemd_unit_disable()
+{
+    local func="${FUNCNAME:-systemd_unit_disable}"
+
+    local u="${systemd_unit:-$systemd_etc_unit}"
+    local p="${systemd_root-}/${u#/}"
+
+    local rc=0
+
+    local f
+    for f in $(systemd_unit_list 'Install' 'Also' "$@"); do
+        for f in "$p"/*.target.wants/$f; do
+            [ ! -L "$f" ] || rm -f "$f" || rc=$((rc + $?))
+        done
+    done
+
+    return $rc
+}
+
+# Usage: service_enable <name>
+service_enable()
+{
+    local func="${FUNCNAME:-service_enable}"
+
+    local f="${1:?missing 1st arg to ${func}() <name>}"
+
+    local rc=0
+
+    f="${f%.service}"
+    chroot "${root:-/}" update-rc.d "$f" defaults &&
+    chroot "${root:-/}" update-rc.d "$f" enable || rc=$?
+
+    local systemd_root="${root-}"
+
+    f="$f.service"
+    systemd_unit_cleanup "$f"
+    systemd_unit_enable  "$f" || return $rc
+}
+
+# Usage: service_disable <name>
+service_disable()
+{
+    local func="${FUNCNAME:-service_disable}"
+
+    local f="${1:?missing 1st arg to ${func}() <name>}"
+
+    local rc=0
+
+    f="${f%.service}"
+    chroot "${root:-/}" update-rc.d "$f" disable || rc=$?
+
+    local systemd_root="${root-}"
+
+    f="$f.service"
+    systemd_unit_cleanup "$f"
+    systemd_unit_disable "$f" || return $rc
+}
+
 ## Initial setup based on distro
 
 eval $(
