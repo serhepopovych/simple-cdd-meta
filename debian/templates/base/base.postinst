@@ -107,7 +107,9 @@ if [ -f "$grub2default" ]; then
         # Get the last 'console=' entry (if none, the whole string is returned)
         while [ $# -gt 0 ]; do
             case "$1" in
-                console=ttyS*|console=com*) serial="$1" ;;
+                console=ttyS*|console=hvc*|console=com*)
+                    serial="$1"
+                    ;;
             esac
             shift
         done
