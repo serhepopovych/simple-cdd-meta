@@ -1,0 +1,192 @@
+#!/bin/bash
+
+[ -z "${__distro_postinst__-}" ] || return 0
+__distro_postinst__=1
+
+## Global config
+
+# Initial user account that can be used by automation setup services.
+user='setup'
+
+## Common helper routines
+
+true()  {   :; }
+false() { ! :; }
+
+## Boot command line parameters handling helpers
+
+_cmdline_file='/proc/cmdline'
+cmdline_file="${cmdline_file:-${_cmdline_file}}"
+
+# Usage: cmdline_get_console [<file>]
+cmdline_get_console()
+{
+    local func="${FUNCNAME:-cmdline_get_console}"
+
+    local file="${1:-$cmdline_file}"
+
+    # Based on grub-installer udeb code.
+
+    eval set -- $(cat "$file")
+
+    local serial=
+
+    # Get the last 'console=' entry (if none, the whole string is returned)
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            console=ttyS*|console=hvc*|console=com*)
+                serial="$1"
+                ;;
+        esac
+        shift
+    done
+
+    if [ -n "$serial" ]; then
+        echo "$serial"
+    fi
+}
+
+## Grub helpers
+
+# Usage: grub_update ...
+grub_update()
+{
+    if type update-grub2 >/dev/null 2>&1; then
+        update-grub2
+    elif type update-grub >/dev/null 2>&1; then
+        update-grub
+    else
+        f="$(readlink '/etc/grub2.cfg' 2>/dev/null)" &&
+            [ -n "$f" ] ||
+        f='/boot/grub2/grub.cfg'
+
+        grub2-mkconfig -o "$f"
+    fi
+}
+
+# Usage: grub_serial_console <console=...>
+grub_serial_console()
+{
+    local func="${FUNCNAME:-grub_serial_console}"
+
+    local serconsole="${1:?missing 1st arg to ${func}() <console=...>}"
+    shift
+
+    local unit=''
+
+    set -- $(IFS=',' && echo $serconsole)
+    if [ $# -gt 2 ] || [ -n "${1##console=*}" ]; then
+        : "${unit:?${func}: not in console=device[,...] format}"
+    fi
+
+    local unit="${1##console=*[^0-9]}"
+    if [ -n "${unit#*[^0-9]*}" ]; then
+        : "${unit:?${func}: no unit number in $1}"
+    fi
+
+    local speed='' parity='n' word='8'
+    if [ -n "${2-}" ]; then
+        speed="${2%%[^0-9]*}"
+
+        parity="${2#$speed}"
+        word="$parity"
+
+        parity="${parity%%[0-9]*}"
+        word="${word#$parity}"
+        word="${word%%[^0-9]*}"
+    fi
+    speed="--speed=${speed:-115200}"
+    case "$parity" in
+        n) parity=' --parity=no'   ;;
+        e) parity=' --parity=even' ;;
+        o) parity=' --parity=odd'  ;;
+        *) parity=''               ;;
+    esac
+    [ -z "$word" ] || word=" --word=$word"
+
+    echo "serial --unit=$unit $speed$word$parity --stop=1"
+}
+
+## Package manager helpers
+
+# Usage: pkg_is_installed <pkg_name>
+pkg_is_installed()
+{
+    local func="${FUNCNAME:-pkg_is_installed}"
+
+    local pkg_name="${1:?missing 1st arg to ${func}() <pkg_name>}"
+
+    if [ -z "${pkg_is_installed__cmd-}" ]; then
+        if type rpm >/dev/null 2>&1; then
+            pkg_is_installed__cmd='rpm -qi'
+        elif type dpkg >/dev/null 2>&1; then
+            pkg_is_installed__cmd='dpkg -s'
+        else
+            pkg_is_installed__cmd='false'
+        fi
+    fi
+
+    $pkg_is_installed__cmd "$pkg_name" >/dev/null 2>&1 || return
+}
+
+## Initial setup based on distro
+
+eval $(
+    # Source in subshell to not pollute environment
+
+    release_file='/etc/os-release'
+
+    if [ -f "$release_file" ] && . "$release_file" >/dev/null 2>&1; then
+        distro="$ID"
+        release="$VERSION_ID"
+        codename="$VERSION_CODENAME"
+        [ -n "$codename" ] ||
+            codename="$(echo "$PRETTY_NAME" | sed -n -e 's/^.*(\(\w\+\)).*$/\1/p')"
+    elif type lsb_release >/dev/null 2>&1; then
+        distro="$(lsb_release -s -i)"
+        release="$(lsb_release -s -r)"
+        codename="$(lsb_release -s -c)"
+    else
+        # old or unsupported distro
+        distro=''
+        release=''
+        codename=''
+    fi
+
+    distro="$(echo "$distro" | tr '[:upper:]' '[:lower:]')"
+    [ -n "$distro" ] || exit
+
+    release="${release%%.*}"
+    [ "$release" -gt 0 ] 2>/dev/null || exit
+
+    if [ "$distro" = 'centos' ]; then
+        last_supported_release=7
+    elif [ "$distro" = 'debian' ]; then
+        last_supported_release=9
+    else
+        # unsupported distro
+        exit 1
+    fi
+
+    [ $release -ge $last_supported_release ] &&
+        new_distro=true || new_distro=false
+
+    if [ "$distro" = 'debian' ]; then
+        if $new_distro; then
+            apt_url='http://deb.debian.org'
+        else
+            apt_url='http://archive.debian.org'
+        fi
+    else
+        apt_url=''
+    fi
+
+    printf 'distro=%s release=%s codename=%s new_distro=%s apt_url=%s\n' \
+        "$distro" "$release" "$codename" "$new_distro" "$apt_url"
+)
+
+[ -n "$distro" ] || exit
+
+## Exit/return successfuly
+
+:

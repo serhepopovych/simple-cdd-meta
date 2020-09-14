@@ -1,36 +1,7 @@
 #!/bin/bash
 
-## Global config
-
-# Initial user account that can be used by automation setup services.
-user='setup'
-
-## Global helper routines
-
-true()  {   :; }
-false() { ! :; }
-
-## Define package manager command that checks if package installed
-
-# Usage: pkg_is_installed <pkg_name>
-pkg_is_installed()
-{
-    local func="${FUNCNAME:-pkg_is_installed}"
-
-    local pkg_name="${1:?missing 1st arg to ${func}() <pkg_name>}"
-
-    if [ -z "${pkg_is_installed__cmd-}" ]; then
-        if type rpm >/dev/null 2>&1; then
-            pkg_is_installed__cmd='rpm -qi'
-        elif type dpkg >/dev/null 2>&1; then
-            pkg_is_installed__cmd='dpkg -s'
-        else
-            pkg_is_installed__cmd='false'
-        fi
-    fi
-
-    $pkg_is_installed__cmd "$pkg_name" >/dev/null 2>&1 || return
-}
+# Source functions library
+. /usr/local/simple-cdd/distro.postinst
 
 ## Create XDG and other dirs in /etc/skel, ~$user and ~root
 
