@@ -304,6 +304,22 @@ systemd_unit_list()
     fi
 }
 
+# Usage: systemd_unit_find <section> <attribute> <unit1> <unit2> ...
+systemd_unit_find()
+{
+    local f u
+
+    for f in $(systemd_unit_list "$@"); do
+        for u in \
+            "$systemd_etc_unit" \
+            "$systemd_lib_unit" \
+            #
+        do
+            u="$u/$f" && [ -f "$u" ] && echo "$u" || :
+        done
+    done
+}
+
 # Usage: systemd_unit_enable <unit1> <unit2> ...
 systemd_unit_enable()
 {
