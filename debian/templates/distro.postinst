@@ -408,6 +408,60 @@ service_disable()
     systemd_unit_disable "$f" || return $rc
 }
 
+## Secure Shell (SSH) ~/.ssh/authorized_keys helpers
+
+# Usage: ssh_copy_id <user1> <user2> ...
+ssh_copy_id()
+{
+    local func="${FUNCNAME:-ssh_copy_id}"
+
+    local u g d t ak=''
+
+    for u in "$@"; do
+        t="~$u"
+
+        # Skip non-existent users and those without home directory
+        eval "d=$t" && [ "$d" != "$t" ] || continue
+
+        # Skip users whose home directory does not exist
+        [ -d "$d" ] || continue
+
+        # Determine effective group id for user $u
+        g="$(id -g "$u")" && [ -n "$g" ] || continue
+
+        # Make ~/.ssh if it does not already exist
+        t="$d/.ssh"
+
+        install -d -m 0700 -o "$u" -g "$g" "$t" || continue
+
+        # Create and/or adjust ownership on authorized_keys
+        t="$t/authorized_keys"
+
+          if [ -f "$t" ]; then
+            chmod 0600 "$t" && chown "$u:$g" "$t" || continue
+        elif [ ! -e "$t" ]; then
+            # Remove possible broken symlink
+            rm -f "$t" ||:
+
+            install -D -m 0600 -o "$u" -g "$g" /dev/null "$t" || continue
+        else
+            continue
+        fi
+
+        # Add to list
+        ak="$ak'$t' "
+    done
+
+    eval set -- $ak
+
+    if [ -n "${no_base64+x}" ]; then
+        tee >/dev/null -a "$@"
+    else
+        base64 -d -i | \
+        tee >/dev/null -a "$@"
+    fi
+}
+
 ## Initial setup based on distro
 
 eval $(
