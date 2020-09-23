@@ -331,12 +331,18 @@ systemd_unit_enable()
 
     local rc=0
 
-    local f t
-    for f in $(systemd_unit_list 'Install' 'Also' "$@"); do
-        for t in $(systemd_unit_get 'Install' 'WantedBy' "$f"); do
+    local f t u
+    for f in $(systemd_unit_find 'Install' 'Also' "$@"); do
+        u="${f##*/}"
+        for t in \
+            $(
+                systemd_unit="${f%/$u}"
+                systemd_unit_get 'Install' 'WantedBy' "$u"
+             )
+        do
             t="$p/$t.wants"
 
-            install -d "$t" && ln -sf "$u/$f" "$t/$f" || rc=$((rc + $?))
+            install -d "$t" && ln -sf "$f" "$t/$u" || rc=$((rc + $?))
         done
     done
 
@@ -353,10 +359,10 @@ systemd_unit_disable()
 
     local rc=0
 
-    local f
-    for f in $(systemd_unit_list 'Install' 'Also' "$@"); do
-        for f in "$p"/*.target.wants/$f; do
-            [ ! -L "$f" ] || rm -f "$f" || rc=$((rc + $?))
+    local u
+    for u in $(systemd_unit_list 'Install' 'Also' "$@"); do
+        for u in "$p"/*.target.wants/$u; do
+            [ ! -L "$u" ] || rm -f "$u" || rc=$((rc + $?))
         done
     done
 
