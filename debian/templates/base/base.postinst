@@ -219,10 +219,10 @@ if [ ! -f "$f" ]; then
         cat >"$f" <<'_EOF'
 [Unit]
 Description=OpenSSH Server Key Generation
-ConditionFileNotEmpty=|!/etc/ssh/ssh_host_rsa_key
-ConditionFileNotEmpty=|!/etc/ssh/ssh_host_dsa_key
-ConditionFileNotEmpty=|!/etc/ssh/ssh_host_ecdsa_key
-ConditionFileNotEmpty=|!/etc/ssh/ssh_host_ed25519_key
+ConditionPathExists=|!/etc/ssh/ssh_host_rsa_key
+ConditionPathExists=|!/etc/ssh/ssh_host_dsa_key
+ConditionPathExists=|!/etc/ssh/ssh_host_ecdsa_key
+ConditionPathExists=|!/etc/ssh/ssh_host_ed25519_key
 Before=ssh.service ssh.socket
 
 [Service]
