@@ -262,16 +262,16 @@ systemd_unit_list()
     local e="${systemd_root-}/${systemd_etc_unit#/}"
     local l="${systemd_root-}/${systemd_lib_unit#/}"
 
-    local f ifs
+    local f u=''
 
-    local tt=' '
+    local sul_tt="${sul_tt:- }"
     local et=' ' et_dir="$systemd_etc_unit"
     local lt=' ' lt_dir="$systemd_lib_unit"
 
     for f in "$@"; do
         f="${f##*/}"
 
-        [ -n "${tt##* $f *}" ] || continue
+        [ -n "${sul_tt##* $f *}" ] || continue
 
           if [ -f "$e/$f" ]; then
             et="$et$f "
@@ -281,23 +281,27 @@ systemd_unit_list()
             continue
         fi
 
-        tt="$tt$f "
+        sul_tt="$sul_tt$f "
     done
 
     for f in 'et' 'lt'; do
-        for f in \
-            $(
+        u=$u$(
+                # u is in subshell is not the same as outside
                 eval "
-                    export systemd_unit=\"\$${f}_dir\"
-                    systemd_unit_get \"\$section\" \"\$attribute\" \$${f}
+                    u="\$${f}"
+                    if [ -n \"\$u\" ]; then
+                        systemd_unit=\"\$${f}_dir\"
+                        systemd_unit_get \"\$section\" \"\$attribute\" \$u
+                    fi
                 "
              )
-        do
-            [ -z "${tt##* $f *}" ] || tt="$tt$f "
-        done
     done
 
-    echo $tt
+    if [ -z "$u" ]; then
+        echo $sul_tt
+    else
+        "$func" "$section" "$attribute" $u
+    fi
 }
 
 # Usage: systemd_unit_enable <unit1> <unit2> ...
