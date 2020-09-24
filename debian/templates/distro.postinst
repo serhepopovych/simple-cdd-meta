@@ -462,6 +462,29 @@ ssh_copy_id()
     fi
 }
 
+## Debian-installer helpers
+
+# Usage: di_chroot_cleanup <root>
+di_chroot_cleanup()
+{
+    local func="${FUNCNAME:-di_chroot_cleanup}"
+
+    local root="${1:?missing 1st arg to ${func}() <root>}"
+    local t f
+
+    ## Adopted from apt-setup/generators/40cdrom::chroot_cleanup_localmounts()
+
+    rm -f "$root/usr/sbin/policy-rc.d" ||:
+
+    # start-stop-daemon
+    t="$root/sbin/start-stop-daemon" && f="$t.REAL"
+    [ ! -x "$f" ] || mv -f "$f" "$t" ||:
+
+    # initctl
+    t="$root/sbin/initctl" && f="$t.REAL"
+    [ ! -x "$f" ] || mv -f "$f" "$t" ||:
+}
+
 ## Initial setup based on distro
 
 eval $(
