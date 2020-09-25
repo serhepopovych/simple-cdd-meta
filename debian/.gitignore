@@ -6,6 +6,9 @@
 /*/*/debian-installer*.changes
 /*/*/debian-installer*.deb
 
+# local packages
+!/*/*/packages/
+
 # build artifacts
 /*/*/images/
 /*/*/tmp/
