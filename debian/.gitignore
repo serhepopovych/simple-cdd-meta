@@ -1,10 +1,10 @@
 
 # debian-installer build artifacts
-*.tar.gz
-*.buildinfo
-*.build
-*.changes
-*.deb
+/*/*/debian-installer*.tar.gz
+/*/*/debian-installer*.buildinfo
+/*/*/debian-installer*.build
+/*/*/debian-installer*.changes
+/*/*/debian-installer*.deb
 
 # build artifacts
 /*/*/images/
@@ -15,7 +15,5 @@
 !/*/*/profiles/sh
 !/*/*/profiles/*.sh
 
-# stds file
 /*/*/stds
-# defs file
 /*/*/defs
