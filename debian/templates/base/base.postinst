@@ -378,11 +378,12 @@ if [ -f "$interfaces" ]; then
         install -d "$interfaces_d"
     fi
 
-    if ! grep -q "^source\(-directory\)\?[ \t]\+$interfaces_d" "$interfaces"; then
-        cat >"$interfaces" <<_EOF
-# Source interfaces configuration
-source $interfaces_d/*
-_EOF
+    if ! grep -q "^source\(-directory\)\?\s\+$interfaces_d" "$interfaces"; then
+        sed -i "$interfaces" \
+            -e '/# .\+ For more information, see interfaces(5)\.$/a\
+\
+# Source interfaces configuration\
+'"source $interfaces_d/*"
     fi
 fi
 

@@ -124,6 +124,12 @@ d-i netcfg/no_default_route boolean false
 d-i netcfg/dhcp_failed note
 d-i netcfg/dhcp_options select Do not configure the network at this time
 
+# Provide configuration for particular network management tool in
+# post-installation when multiple are available. Selecting ifupdown
+# will skip override of /etc/network/interfaces if it exists simplifying
+# it's modification.
+d-i netcfg/target_network_config select ifupdown
+
 #### Partitioning
 
 ## Partitioning example
