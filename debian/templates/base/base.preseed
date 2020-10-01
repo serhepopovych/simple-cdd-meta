@@ -117,7 +117,7 @@ d-i netcfg/hostname string debian
 
 # In isolated setup networks there might be no need in default route
 # and thus dhcp might be configured without it. Ignore question.
-d-i netcfg/no_default_route boolean false
+d-i netcfg/no_default_route boolean true
 
 # If you want the preconfiguration file to work on systems both with and
 # without a dhcp server, uncomment these lines.
