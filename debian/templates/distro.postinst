@@ -153,7 +153,7 @@ shell_var_replace()
         sed -i "$file" \
             -e "s/^\s*$opt=/#commented $by#&/" \
             -e "\$a\\
-
+\\
 #replaced $by#\\
 $o=\"$val\"" \
             #
