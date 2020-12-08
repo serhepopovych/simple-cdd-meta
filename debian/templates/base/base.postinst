@@ -422,6 +422,10 @@ if [ ! -f "$shell_timeout" ]; then
 _EOF
 fi
 
+## Start ssh-agent(1) from ~/.bashrc for interactive sessions
+
+ssh_agent_start4bashrc '/etc/skel/.bashrc' root "$user"
+
 ## Add sysctl(8) hardening settings from Ubuntu 16.04 LTS procps package
 
 sysctl_d='/etc/sysctl.d/10-console-messages.conf'
