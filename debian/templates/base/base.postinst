@@ -61,8 +61,29 @@ fi # [ -f "$grub2default" ]
 
 # Apply theme from debian-installer/build/boot/x86/grub/grub-efi.cfg
 grub2theme='/etc/grub.d/05_debian_theme'
-if [ -f "$grub2theme" ]; then
+if [ ! -f "$grub2theme" ]; then
     cat >"$grub2theme" <<'_EOF'
+#!/bin/sh
+
+set -e
+
+cat <<EOF
+
+set color_normal=light-gray/black
+set color_highlight=black/light-gray
+
+set menu_color_normal=cyan/blue
+set menu_color_highlight=blue/light-gray
+EOF
+_EOF
+
+    update_grub=y
+fi # [ ! -f "$grub2theme" ]
+
+# Apply serial terminfo commands when appropriate
+grub2serial_terminfo='/etc/grub.d/20_serial_terminfo'
+if [ ! -f "$grub2serial_terminfo" ]; then
+    cat >"$grub2serial_terminfo" <<'_EOF'
 #!/bin/sh
 
 set -e
@@ -82,19 +103,10 @@ terminfo serial_com$serial vt100-color -u
 EOF
     fi
 fi
-
-cat <<EOF
-
-set color_normal=light-gray/black
-set color_highlight=black/light-gray
-
-set menu_color_normal=cyan/blue
-set menu_color_highlight=blue/light-gray
-EOF
 _EOF
 
     update_grub=y
-fi # [ -f "$grub2theme" ]
+fi # [ ! -f "$grub2serial_terminfo" ]
 
 # Add support for ipxe on BIOS and EFI systems
 
