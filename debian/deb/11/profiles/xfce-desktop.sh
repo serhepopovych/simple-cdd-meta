@@ -1,0 +1,1 @@
+../templates/xfce-desktop.sh

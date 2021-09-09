@@ -1,0 +1,6 @@
+
+# Archived releases does not follow oldstable/stable/testing/unstable
+# cdrom/mirror suite/codename semantics making impossible to find right
+# distro directory in archive (e.g. for security updates).
+d-i mirror/codename string bullseye
+d-i cdrom/codename string bullseye

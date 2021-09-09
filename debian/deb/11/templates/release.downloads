@@ -1,0 +1,4 @@
+## Release specific packages
+
+# provides dbus-session-bus
+dbus-user-session

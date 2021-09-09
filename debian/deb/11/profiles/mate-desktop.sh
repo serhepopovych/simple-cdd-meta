@@ -1,0 +1,1 @@
+../templates/mate-desktop.sh

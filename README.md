@@ -34,7 +34,7 @@ an open source base for vendor specific distributions for appliances.
 ### Requirements
 
 1. Buildhost.
-     Debian GNU/Linux 10 (buster) system with simple-cdd, reprepro and cpp installed.
+     Debian GNU/Linux 11 (bullseye) system with simple-cdd, reprepro and cpp installed.
 2. Network.
      IPv4/IPv6 network connection to deb.debian.org and archive.debian.org.
 3. Storage.
@@ -59,7 +59,7 @@ is not implemented yet.
 #### Do build images
 
 ````
-for i in 7 8 9 10
+for i in 7 8 9 10 11
 do
     ./debian/deb/$i/profiles/minimal.sh
 done

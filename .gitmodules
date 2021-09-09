@@ -34,3 +34,11 @@
 	path = debian/deb/9/debian-cd
 	url = https://github.com/serhepopovych/debian-cd.git
 	branch = mydistro/buster
+[submodule "debian/deb/11/debian-installer"]
+	path = debian/deb/11/debian-installer
+	url = https://github.com/serhepopovych/debian-installer.git
+	branch = mydistro/bullseye
+[submodule "debian/deb/11/debian-cd"]
+	path = debian/deb/11/debian-cd
+	url = https://github.com/serhepopovych/debian-cd.git
+	branch = mydistro/bullseye
