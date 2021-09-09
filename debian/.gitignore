@@ -1,4 +1,11 @@
 
+# debian-cd build artifacts
+/*/*/debian-cd*.tar.gz
+/*/*/debian-cd*.buildinfo
+/*/*/debian-cd*.build
+/*/*/debian-cd*.changes
+/*/*/debian-cd*.deb
+
 # debian-installer build artifacts
 /*/*/debian-installer*.tar.gz
 /*/*/debian-installer*.buildinfo
