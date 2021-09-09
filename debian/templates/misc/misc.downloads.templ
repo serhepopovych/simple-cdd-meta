@@ -1,0 +1,42 @@
+
+/* File utils */
+locate
+
+/* Archivers */
+lzip
+lzma
+lzop
+unzip
+
+/* Additional Linux utilities */
+inotify-tools
+lockfile-progs
+
+schedtool
+cpulimit
+#if version >= 8
+cgroup-tools
+#else
+cgroup-bin
+#endif
+
+uuid-runtime
+
+/* POSIX ACLs and Extended attributes (XATTR) support */
+acl
+attr
+
+/* BSD compatibility utils */
+bsdmainutils
+bsdutils
+
+/* Partition table, Linux MD and LVM management tools */
+parted
+
+/* DM and LUKS management tools */
+dmeventd
+dmsetup
+cryptsetup-bin
+
+/* Filesystem mount and quota */
+quota
