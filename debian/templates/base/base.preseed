@@ -245,7 +245,7 @@ d-i grub-installer/with_other_os boolean true
 # Use the following option to add additional boot parameters for the
 # installed system (if supported by the bootloader installer).
 # Note: options passed to the installer will be added automatically.
-d-i debian-installer/add-kernel-opts string panic=15 console=ttyS0,115200n8 console=tty0
+d-i debian-installer/add-kernel-opts string panic=15
 
 # To install to the first device (assuming it is not a USB stick):
 #d-i grub-installer/bootdev string default

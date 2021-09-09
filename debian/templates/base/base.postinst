@@ -16,23 +16,17 @@ if [ -f "$grub2default" ]; then
         pkg_is_installed "grub-$g" ||
             continue
 
-        # enable both serial and regular console
-
-        if grep -q '^GRUB_TERMINAL=' "$grub2default"; then
-            # it is set by installer or by default in config
-            sed -i "$grub2default" -e 's,^\(GRUB_TERMINAL\)=.*,\1="serial console",g'
-        else
-            echo "GRUB_TERMINAL=\"serial console\"" >> "$grub2default"
-        fi
+        # enable serial console
 
         if grep -q '^GRUB_SERIAL_COMMAND=.*--unit=\([0-9]*\).*' "$grub2default"; then
             # it is set by installer or by default in config
             :
         else
             serial="$(cmdline_get_console)"
-            # From grub-efi.cfg
-            serial="${serial:-console=ttyS0,115200n8}"
-            echo "GRUB_SERIAL_COMMAND=\"$(grub_serial_console "$serial")\"" >> "$grub2default"
+            if [ -n "$serial" ]; then
+                # From grub-efi.cfg
+                echo "GRUB_SERIAL_COMMAND=\"$(grub_serial_console "$serial")\"" >> "$grub2default"
+            fi
         fi
 
         grub_serial_tty="$(sed -n -e 's,^GRUB_SERIAL_COMMAND=.*--unit=\([0-9]*\).*,\1,p' "$grub2default")"
@@ -43,6 +37,14 @@ if [ -f "$grub2default" ]; then
                 # replace --unit=<u> with efi<u> on EFI systems to fix artifacts
                 sed -i "$grub2default" -e '/^GRUB_SERIAL_COMMAND=/s,--unit=\([0-9]*\),efi\1,g'
             fi
+        fi
+
+        if grep -q '^GRUB_TERMINAL=' "$grub2default"; then
+            # it is set by installer or by default in config
+            sed -i "$grub2default" \
+                -e "s,^\(GRUB_TERMINAL\)=.*,\1=\"${grub_serial_tty:+serial }console\",g"
+        else
+            echo "GRUB_TERMINAL=\"${grub_serial_tty:+serial }console\"" >> "$grub2default"
         fi
 
         # disable "Advanced options ..." submenu and put entries in main menu
