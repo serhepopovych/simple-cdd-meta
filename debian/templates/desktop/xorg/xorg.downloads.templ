@@ -1,0 +1,39 @@
+
+/** X.Org **/
+
+xorg
+xserver-xorg-video-all
+xserver-xorg-input-all
+xterm
+
+/** Audio **/
+
+/* pulseaudio */
+pulseaudio
+
+/* MESA */
+glx-alternative-mesa
+mesa-utils
+
+/** Video decoding/encoding acceleration **/
+
+/* Intel VA (Video Acceleration) API */
+#if version >= 8
+va-driver-all
+#else
+xvba-va-driver
+i965-va-driver
+vdpau-va-driver
+#endif
+vainfo
+
+/* VDPAU (Video Decode and Presentation API for UNIX) API */
+#if version >= 9
+vdpau-driver-all
+#elif version >= 8
+libvdpau-va-gl1
+mesa-vdpau-drivers
+#else
+nvidia-vdpau-driver
+#endif
+vdpauinfo
