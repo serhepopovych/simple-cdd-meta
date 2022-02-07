@@ -187,6 +187,9 @@ systemd_etc_unit='/etc/systemd/system'
 # Usage: systemd_unit_cleanup <unit1> <unit2> ...
 systemd_unit_cleanup()
 {
+    # Do cleanup if enabled.
+    [ -n "${systemd_do_unit_cleanup+x}" ] || return 0
+
     local func="${FUNCNAME:-systemd_unit_cleanup}"
 
     local u="${systemd_unit:-$systemd_lib_unit}"
