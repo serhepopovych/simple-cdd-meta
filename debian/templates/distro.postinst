@@ -630,7 +630,7 @@ eval $(
     if [ "$distro" = 'centos' ]; then
         last_supported_release=7
     elif [ "$distro" = 'debian' ]; then
-        last_supported_release=9
+        last_supported_release=10
     else
         # unsupported distro
         exit 1
