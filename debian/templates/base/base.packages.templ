@@ -124,8 +124,6 @@ iproute2
 isc-dhcp-common
 isc-dhcp-client
 
-ifupdown
-
 /* Network diagnostics tool */
 iputils-ping
 iputils-tracepath
@@ -135,15 +133,23 @@ wget
 curl
 
 /* Firewall management utilities */
+#if version < 10
 iptables
 iptables-persistent
+#else
+nftables
+#endif
 
 /* SSH, NTP, HTTP(S) and SNMP services */
 openssh-client
 openssh-server
 
 /* NTP service */
+#if version < 10
 ntp
+#else
+systemd-timesyncd
+#endif
 
 /* MTA (Mail Transfer Agent) */
 postfix
@@ -153,4 +159,8 @@ rsyslog
 logrotate
 
 /* Running jobs periodically */
+#if version < 10
 cron
+#else
+systemd-cron
+#endif

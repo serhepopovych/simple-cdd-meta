@@ -606,8 +606,9 @@ vm.mmap_min_addr = 65536
 _EOF
 fi
 
-## Create sane default iptables rules on Debian and Debian-based distros
+## Create sane default firewall rules on Debian and Debian-based distros
 
+# iptables
 iptables_dir='/etc/iptables'
 if [ -d "$iptables_dir" ]; then
     iptables_rules_v4="$iptables_dir/rules.v4"
@@ -645,6 +646,41 @@ _EOF
 COMMIT
 _EOF
     fi
+fi
+
+# nftables
+nftables_rules='/etc/nftables.conf'
+if [ -f "$nftables_rules" ]; then
+    cat >"$nftables_rules" <<'_EOF'
+#!/usr/sbin/nft -f
+
+flush ruleset
+
+table inet filter {
+	chain input {
+		type filter hook input priority 0; policy accept;
+		iif lo accept
+		meta l4proto icmp accept
+		meta l4proto ipv6-icmp accept
+		ct state established,related accept
+		ct state new tcp dport 22 accept
+		reject with icmpx type admin-prohibited
+	}
+	chain forward {
+		type filter hook forward priority 0; policy accept;
+		reject with icmpx type admin-prohibited
+	}
+}
+_EOF
+fi
+
+# default firewall is
+if [ -f "$nftables_rules" ]; then
+    # ... nftables
+    service_enable 'nftables'
+else
+    # ... iptables
+    service_enable 'netfilter-persistent'
 fi
 
 ## Exit successfuly
