@@ -381,15 +381,19 @@ service_enable()
 
     local rc=0
 
-    f="${f%.service}"
-    chroot "${root:-/}" update-rc.d "$f" defaults &&
-    chroot "${root:-/}" update-rc.d "$f" enable || rc=$?
+    case "${f##*.}" in
+        'service'|"$f")
+            f="${f%.service}"
+            chroot "${root:-/}" update-rc.d "$f" defaults &&
+            chroot "${root:-/}" update-rc.d "$f" enable || rc=$?
+            f="$f.service"
+            ;;
+    esac
 
     local systemd_root="${root-}"
 
-    f="$f.service"
     systemd_unit_cleanup "$f"
-    systemd_unit_enable  "$f" || return $rc
+    systemd_unit_enable  "$f" || return $((rc + $?))
 }
 
 # Usage: service_disable <name>
@@ -401,14 +405,18 @@ service_disable()
 
     local rc=0
 
-    f="${f%.service}"
-    chroot "${root:-/}" update-rc.d "$f" disable || rc=$?
+    case "${f##*.}" in
+        'service'|"$f")
+            f="${f%.service}"
+            chroot "${root:-/}" update-rc.d "$f" disable || rc=$?
+            f="$f.service"
+            ;;
+    esac
 
     local systemd_root="${root-}"
 
-    f="$f.service"
     systemd_unit_cleanup "$f"
-    systemd_unit_disable "$f" || return $rc
+    systemd_unit_disable "$f" || return $((rc + $?))
 }
 
 ## Secure Shell (SSH) ~/.ssh/authorized_keys helpers
