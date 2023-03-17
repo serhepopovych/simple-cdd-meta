@@ -1119,7 +1119,10 @@ ssh_agent_start4bashrc()
         [ -z "$t" ] || continue
 
         # Skip already patched files
-        t="$(sed -n -e '/^# Start ssh-agent for non-X11 session/{p;q}' "$f")"
+        t="$(
+              t='# Start ssh-agent for non-X11 session'
+              sed -n -e "/^$t/{p;q}" "$f"
+            )" &&
         [ -z "$t" ] || continue
 
         # Keep it disabled by default for compatibility
@@ -1130,8 +1133,10 @@ ssh_agent_start4bashrc()
         # Patch .bashrc file at known location instead of appending
         sed -i "$f" \
             -e 'N' \
-            -e '/^\s\+\. ~\/\.bash_aliases\s\+fi$/!{P;D}' \
-            -e 'r /dev/stdin' \
+            -e '/^\s\+\. \/etc\/bashrc\s\+fi$/b patch' \
+            -e '/^\s\+\. ~\/\.bash_aliases\s\+fi$/b patch' \
+            -e 'P;D' \
+            -e ":patch r /dev/stdin" \
         <<'_EOF'
 
 # Start ssh-agent for non-X11 session unless ...
