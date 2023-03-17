@@ -80,7 +80,7 @@ grub_serial_console()
     fi
 
     local unit="${1##console=*[^0-9]}"
-    if [ -n "${unit#*[^0-9]*}" ]; then
+    if [ -z "$unit" ]; then
         : "${unit:?${func}: no unit number in $1}"
     fi
 
