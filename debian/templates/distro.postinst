@@ -51,17 +51,56 @@ cmdline_get_console()
 # Usage: grub_update ...
 grub_update()
 {
-    if type update-grub2 >/dev/null 2>&1; then
-        update-grub2
-    elif type update-grub >/dev/null 2>&1; then
-        update-grub
-    else
-        f="$(readlink '/etc/grub2.cfg' 2>/dev/null)" &&
-            [ -n "$f" ] ||
-        f='/boot/grub2/grub.cfg'
+    local rc=0
 
-        grub2-mkconfig -o "$f"
+    if type update-grub2 >/dev/null 2>&1; then
+        update-grub2 "$@" || rc=$?
+    elif type update-grub >/dev/null 2>&1; then
+        update-grub "$@" || rc=$?
+    else
+        if type grub2-mkconfig >/dev/null 2>&1; then
+            grub2_mkconfig() { grub2-mkconfig "$@" || return; }
+        elif type grub-mkconfig >/dev/null 2>&1; then
+            grub2_mkconfig() { grub-mkconfig "$@" || return; }
+        else
+            return 1
+        fi
+
+        local f t
+        for f in \
+            '/etc/grub2.cfg' \
+            '/etc/grub2-efi.cfg' \
+            '/boot/grub2/grub.cfg' \
+            '/boot/grub/grub.cfg' \
+            '' \
+            #
+        do
+            if [ -z "$f" ]; then
+                rc=$((rc + 1))
+                break
+            fi
+            if [ -L "$f" ]; then
+                if f="$(readlink -f "$f" 2>/dev/null)" && [ -n "$f" ]; then
+                    :
+                else
+                    rc=$((rc + $?))
+                    continue
+                fi
+            fi
+            t="${f%/*}"
+            if [ -f "$f" -o -d "$t/locale" -o -d "$t/fonts" ]; then
+                if grub2_mkconfig -o "$f" "$@" && rc=0; then
+                    break
+                else
+                    rc=$((rc + $?))
+                fi
+            fi
+        done
+
+        unset -f grub2_mkconfig
     fi
+
+    return $rc
 }
 
 # Usage: grub_serial_console <console=...>
