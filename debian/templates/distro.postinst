@@ -118,21 +118,21 @@ grub_serial_console()
         : "${unit:?${func}: not in console=device[,...] format}"
     fi
 
-    local unit="${1##console=*[^0-9]}"
+    local unit="${1##console=*[!0-9]}"
     if [ -z "$unit" ]; then
         : "${unit:?${func}: no unit number in $1}"
     fi
 
     local speed='' parity='n' word='8'
     if [ -n "${2-}" ]; then
-        speed="${2%%[^0-9]*}"
+        speed="${2%%[!0-9]*}"
 
         parity="${2#$speed}"
         word="$parity"
 
         parity="${parity%%[0-9]*}"
         word="${word#$parity}"
-        word="${word%%[^0-9]*}"
+        word="${word%%[!0-9]*}"
     fi
     speed="--speed=${speed:-115200}"
     case "$parity" in
@@ -231,7 +231,7 @@ _systemd_validate_unit_name()
     f="${f##*/}"
 
     # Skip invalid unit names
-    [ -n "${f##*[^\[:alnum:]:_@.-]*}" ] || return
+    [ -n "${f##*[!\[:alnum:]:_@.-]*}" ] || return
     # Skip units without name prefix, type suffix or multiple dots
     [ "$f" = "${f%%.*}.${f##*.}" ] || return
     # Skip invalid template name
