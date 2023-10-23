@@ -49,7 +49,7 @@ an open source base for vendor specific distributions for appliances.
 #### Build debian-installer package
 
 Here you need to build debian-installer images somehow using
-specific Debian release (e.g. wheezy, jessie, stretch, buster).
+specific Debian release (e.g. wheezy, jessie, stretch, buster, bullseye).
 
 Most likely you want to do this using docker. However this part
 is not implemented yet.
