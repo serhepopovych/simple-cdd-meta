@@ -147,7 +147,7 @@ openssh-server
 /* NTP service */
 #if version < 10
 ntp
-#else
+#elif version > 10
 systemd-timesyncd
 #endif
 
