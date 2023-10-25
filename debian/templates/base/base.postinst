@@ -78,6 +78,8 @@ set menu_color_normal=cyan/blue
 set menu_color_highlight=blue/light-gray
 EOF
 _EOF
+    # Make it executable
+    chmod a+rx "$grub2theme"
 
     update_grub=y
 fi # [ ! -f "$grub2theme" ]
@@ -106,6 +108,8 @@ EOF
     fi
 fi
 _EOF
+    # Make it executable
+    chmod a+rx "$grub2serial_terminfo"
 
     update_grub=y
 fi # [ ! -f "$grub2serial_terminfo" ]
