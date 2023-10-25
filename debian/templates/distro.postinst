@@ -27,7 +27,7 @@ cmdline_get_console()
 
     # Based on grub-installer udeb code.
 
-    eval set -- $(cat "$file")
+    set -- $(cat "$file")
 
     local serial=
 
