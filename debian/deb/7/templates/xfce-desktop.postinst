@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# Source functions library
+. /usr/local/simple-cdd/distro.postinst
+
+## Configure plymouth
+
+config_plymouth 'spinner'
+
+## Exit successfuly
+exit 0

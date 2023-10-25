@@ -146,6 +146,46 @@ grub_serial_console()
     echo "serial --unit=$unit $speed$word$parity --stop=1"
 }
 
+# Usage: grub_config <name> <var> <val>...
+grub_config()
+{
+    local func="${FUNCNAME:-grub_config}"
+
+    local name="${1-}"
+
+    if [ -n "${name##${__grub_config_name__-}}" ]; then
+        name="simple-cdd-$name"
+        __grub_config_name__=''
+    else
+        name="${__grub_config_name__:?missing 1st arg to ${func}() <name>}"
+    fi
+
+    local var="${2:?missing 2d arg to ${func}() <var>}"
+
+    shift 2
+
+    local t="/etc/default/grub.d/$name.cfg"
+
+    # Add configuration
+    if [ -d "${t%/*.cfg}/" ]; then
+        rm -f "$t" ||:
+    else
+        t="${t%.d/*.cfg}"
+    fi
+
+    {
+        # Add header to annotate configuration block, if needed
+        if [ -z "${__grub_config_name__}" -a -n "${t%%*.cfg}" ]; then
+            echo
+            echo "### $name"
+        fi
+
+        echo "$var=\"\${$var:+$var }$*\""
+    } >>"$t"
+
+    __grub_config_name__="$name"
+}
+
 ## Package manager helpers
 
 # Usage: pkg_is_installed <pkg_name>
@@ -1239,6 +1279,30 @@ if [ -z "${DISPLAY-}" ]; then
     unset ssh_agent ssh_agent_env
 fi
 _EOF
+    done
+}
+
+# Usage: config_plymouth [<theme>]
+config_plymouth()
+{
+    local t="${1-}"
+
+    # Themes in order of preference
+    for t in \
+        "$t" \
+        'tribar' \
+        'text' \
+        'details' \
+        '' \
+        #
+    do
+        if [ -n "$t" -a -f "/usr/share/plymouth/themes/$t/$t.plymouth" ] &&
+            plymouth-set-default-theme -R "$t" >/dev/null 2>&1
+        then
+            grub_config 'plymouth' 'GRUB_CMDLINE_LINUX_DEFAULT' 'splash'
+            grub_update
+            break
+        fi
     done
 }
 
