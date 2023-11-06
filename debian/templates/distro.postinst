@@ -130,6 +130,10 @@ grub_serial_console()
     if [ -z "$unit" ]; then
         : "${unit:?${func}: no unit number in $1}"
     fi
+    if [ -d '/sys/firmware/efi' ]; then
+        # replace <u> with efi<u> on EFI systems for --unit= to fix artifacts
+        unit="efi$unit"
+    fi
 
     local speed='' parity='n' word='8'
     if [ -n "${2-}" ]; then
