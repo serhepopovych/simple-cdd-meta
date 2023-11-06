@@ -232,8 +232,9 @@ grub__config()
 
     local name="${1-}"
 
-    if [ -n "${name##${__grub_config_name__-}}" ]; then
-        name="simple-cdd-$name"
+    if name="${name##simple-cdd-}" && [ -n "$name" ] &&
+       name="simple-cdd-$name" && [ -n "${name##${__grub_config_name__}}" ]
+    then
         __grub_config_name__=''
     else
         name="${__grub_config_name__:?missing 1st arg to ${func}() <name>}"
