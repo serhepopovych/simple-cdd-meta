@@ -18,43 +18,34 @@ if [ -f "$grub2default" ]; then
 
         # enable serial console
 
-        if grep -q '^GRUB_SERIAL_COMMAND=.*--unit=\([0-9]*\).*' "$grub2default"; then
-            # it is set by installer or by default in config
-            :
-        else
-            serial="$(cmdline_get_console)"
-            if [ -n "$serial" ]; then
-                # From grub-efi.cfg
-                echo "GRUB_SERIAL_COMMAND=\"$(grub_serial_console "$serial")\"" >> "$grub2default"
-            fi
+        grub_serial_tty="$(
+            grub_config_get 'GRUB_CMDLINE_LINUX' 'GRUB_CMDLINE_LINUX_DEFAULT' &&
+            echo "${GRUB_CMDLINE_LINUX-} ${GRUB_CMDLINE_LINUX_DEFAULT-}" | \
+            cmdline_get_console - 'grub'
+        )" ||
+        serial="$(
+            cmdline_get_console
+        )"
+
+        if [ -z "$grub_serial_tty" -a -n "${serial-}" ]; then
+            grub_config_add 'serial' 'GRUB_CMDLINE_LINUX' "$serial"
+            grub_serial_tty="$serial"
         fi
 
-        grub_serial_tty="$(sed -n -e 's,^GRUB_SERIAL_COMMAND=.*--unit=\([0-9]*\).*,\1,p' "$grub2default")"
         if [ -n "$grub_serial_tty" ]; then
-            grub_serial_tty="ttyS$grub_serial_tty"
-
-            if [ -d '/sys/firmware/efi' ]; then
-                # replace --unit=<u> with efi<u> on EFI systems to fix artifacts
-                sed -i "$grub2default" -e '/^GRUB_SERIAL_COMMAND=/s,--unit=\([0-9]*\),efi\1,g'
-            fi
+            grub_config_set 'serial' \
+                'GRUB_SERIAL_COMMAND' \
+                "$(grub_serial_console "$grub_serial_tty")" \
+                #
+            grub_config_add '' 'GRUB_TERMINAL' 'serial' 'console'
         fi
 
-        if grep -q '^GRUB_TERMINAL=' "$grub2default"; then
-            # it is set by installer or by default in config
-            sed -i "$grub2default" \
-                -e "s,^\(GRUB_TERMINAL\)=.*,\1=\"${grub_serial_tty:+serial }console\",g"
-        else
-            echo "GRUB_TERMINAL=\"${grub_serial_tty:+serial }console\"" >> "$grub2default"
-        fi
+        grub_serial_tty="${grub_serial_tty##console=}"
+        grub_serial_tty="${grub_serial_tty%%,*}"
 
         # disable "Advanced options ..." submenu and put entries in main menu
 
-        if grep -q '^GRUB_DISABLE_SUBMENU=' "$grub2default"; then
-            # it is set by installer or by default in config
-            sed -i "$grub2default" -e 's,^\(GRUB_DISABLE_SUBMENU\)=.*,\1=y,g'
-        else
-            echo "GRUB_DISABLE_SUBMENU=y" >> "$grub2default"
-        fi
+        grub_config_set 'submenu' 'GRUB_DISABLE_SUBMENU' 'y'
 
         update_grub=y
         break
@@ -92,7 +83,30 @@ if [ ! -f "$grub2serial_terminfo" ]; then
 
 set -e
 
-serial="$(sed -n -e 's,^GRUB_SERIAL_COMMAND=.*--unit=\([0-9]*\).*,\1,p' /etc/default/grub)"
+serial="$(
+    # Source in subshell to not pollute environment
+
+    t='/etc/default/grub'
+    if [ -r "$t" ] && . "$t" >/dev/null; then
+        for t in "$t.d"/*.cfg; do
+            [ ! -r "$t" ] || . "$t" >/dev/null ||:
+        done
+
+        set -- ${GRUB_SERIAL_COMMAND-}
+
+        t=''
+        while [ $# -gt 0 ]; do
+            case "$1" in
+                --unit=*)
+                    t="${1##--unit=}"
+                    ;;
+            esac
+            shift
+        done
+
+        echo "$t"
+    fi
+)"
 
 if [ -n "$serial" ]; then
     if [ -d /sys/firmware/efi ]; then
@@ -215,7 +229,7 @@ boot_boot='/boot/boot'
 
 ## Enable agetty(8) on serial console
 
-if [ -n "$grub_serial_tty" ]; then
+if [ -n "${grub_serial_tty-}" ]; then
     # systemctl(1) fails with old systemd (e.g. on Debian GNU/Linux 7.x (wheezy))
     ln -snf "$systemd_lib_unit/serial-getty@.service" \
             "$systemd_etc_unit/getty.target.wants/serial-getty@$grub_serial_tty.service" ||:

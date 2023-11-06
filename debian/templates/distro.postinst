@@ -13,6 +13,73 @@ user='setup'
 true()  {   :; }
 false() { ! :; }
 
+# Usage: unique [<sep>] <val1>...
+unique()
+{
+    local func="${FUNCNAME:-unique}"
+
+    local sep="${1:-|}"
+    shift
+    local r
+
+    r="$sep"
+    while [ $# -gt 0 ]; do
+        [ -z "${r##*$sep$1$sep*}" ] ||
+            r="$r$1$sep"
+        shift
+    done
+
+    printf '%s\n' "$r"
+}
+
+# Usage: intersect [<sep>] <set1> <set2>
+intersect()
+{
+    local func="${FUNCNAME:-intersect}"
+
+    local sep="${1:-|}"
+    local set1="${2:?missing 2d arg to ${func}() <set1>}"
+    shift 2
+
+    local ifs="$IFS"
+    IFS="$sep" && set -- ${1#|}
+    IFS="$ifs"
+
+    local r="$sep"
+    while [ $# -gt 0 ]; do
+        # unique() and in set1
+        [ -z "${r##*$sep$1$sep*}" -o -n "${set1##*$sep$1$sep*}" ] ||
+            r="$r$1$sep"
+        shift
+    done
+
+    printf '%s\n' "$r"
+}
+
+# Usage: n_intersect [<sep>] <set1> <set2>
+n_intersect()
+{
+    local func="${FUNCNAME:-n_intersect}"
+
+    local sep="${1:-|}"
+    local set1="${2:?missing 2d arg to ${func}() <set1>}"
+    shift 2
+
+    local ifs="$IFS"
+    IFS="$sep" && set -- ${1#|}
+    IFS="$ifs"
+
+    local r="$sep"
+    while [ $# -gt 0 ]; do
+        # unique() and not in set1
+        [ -z "${r##*$sep$1$sep*}" -o -z "${set1##*$sep$1$sep*}" ] ||
+            r="$r$1$sep"
+        shift
+    done
+
+    printf '%s\n' "$r"
+}
+
 ## Boot command line parameters handling helpers
 
 _cmdline_file='/proc/cmdline'
@@ -158,10 +225,10 @@ grub_serial_console()
     echo "serial --unit=$unit $speed$word$parity --stop=1"
 }
 
-# Usage: grub_config <name> <var> <val>...
-grub_config()
+# Usage: grub__config <name> <var> <val>...
+grub__config()
 {
-    local func="${FUNCNAME:-grub_config}"
+    local func="${func:-${FUNCNAME:-grub__config}}"
 
     local name="${1-}"
 
@@ -176,7 +243,24 @@ grub_config()
 
     shift 2
 
-    local t="/etc/default/grub.d/$name.cfg"
+    local ifs="$IFS" t
+
+    IFS='|' && t="|$*|"
+    IFS="$ifs"
+
+    t="$(
+        n_intersect '' "$(grub_config_get_val "$var")" "$t"
+    )"
+
+    IFS='|' && set -- ${t#|}
+    IFS="$ifs"
+
+    if t=" $* " && [ -n "${t##*[!$IFS]*}" ]; then
+        # Nothing to configure: all values already present
+        return 0
+    fi
+
+    t="/etc/default/grub.d/$name.cfg"
 
     # Add configuration
     if [ -d "${t%/*.cfg}/" ]; then
@@ -192,10 +276,117 @@ grub_config()
             echo "### $name"
         fi
 
-        echo "$var=\"\${$var:+$var }$*\""
+        printf '%s="%s%s"\n' \
+            "$var" \
+            "${__grub_config_append__:+\${$var:+\$$var }}" \
+            "$*" \
+            #
     } >>"$t"
 
     __grub_config_name__="$name"
+}
+
+# Usage: grub_config_set <name> <var> <val>...
+grub_config_set()
+{
+    local func="${FUNCNAME:-grub_config_set}"
+    local __grub_config_append__=''
+    grub__config "$@"
+}
+
+# Usage: grub_config_add <name> <var> <val>...
+grub_config_add()
+{
+    local func="${FUNCNAME:-grub_config_add}"
+    local __grub_config_append__='1'
+    grub__config "$@"
+}
+
+# Usage: grub_config_get <var>...
+grub_config_get()
+{
+    local func="${FUNCNAME:-grub_config_get}"
+
+    local t rc=1
+
+    if [ $# -le 0 ]; then
+        set --
+        : "${1:?missing args to ${func}() [<var>...]}"
+    fi
+    if t=" $* " && [ -n "${t##*[!$IFS]*}" ]; then
+        set --
+        : "${1:?empty args to ${func}() [<var>...]}"
+    fi
+
+    # This evaluates only GRUB_*=... and rc={0|1} variables assignment
+    eval $(
+        env -i /bin/sh -c '
+            # Try to close all file descriptors to avoid escape to
+            # eval $() or others sensitive file descriptors of
+            # calling shell.
+            for t in /proc/$$/fd/*; do
+                if [ -e "$t" ] &&
+                   t="${t##*/}" && [ -n "${t##*[!0-9]*}" ]
+                then
+                    case "$t" in
+                        0|1|2)
+                            ;;
+                        *)
+                            eval "exec $t<&-"
+                            ;;
+                    esac
+                fi
+            done
+
+            # Source in subshell to not pollute environment
+
+            t='\''/etc/default/grub'\''
+            rc=1
+
+            if [ -r "$t" ] && . "$t" >/dev/null; then
+                for t in "$t.d"/*.cfg; do
+                    [ ! -r "$t" ] || . "$t" >/dev/null ||:
+                done
+
+                while [ $# -gt 0 ]; do
+                    if [ -z "${1##GRUB_*}" ]; then
+                        eval "
+                            if [ -n \"\${$1+x}\" ]; then
+                                printf \"%s='\''%s'\''\\n\" \\
+                                    '\''$1'\'' \"\${$1-}\"
+                                # At least one variable defined
+                                rc=0
+                            fi
+                        "
+                    fi
+                    shift
+                done
+            fi
+
+            printf "rc=%d\n" "$rc"
+        ' '-' "$@"
+    )
+
+    return $rc
+}
+
+# Usage: grub_config_get_val <var> [<sep>]
+grub_config_get_val()
+{
+    local func="${FUNCNAME:-grub_config_get_val}"
+
+    local var="${1:?missing 1st arg to ${func}() <var>}"
+    local sep="${2:-|}"
+
+    eval "
+        local '$var'=''
+        grub_config_get '$var' || return
+        set -- \${$var-}
+    "
+
+    local ifs="$IFS"
+    IFS="$sep" && printf '|%s|\n' "$*"
+    IFS="$ifs"
 }
 
 ## Package manager helpers
@@ -1311,7 +1502,7 @@ config_plymouth()
         if [ -n "$t" -a -f "/usr/share/plymouth/themes/$t/$t.plymouth" ] &&
             plymouth-set-default-theme -R "$t" >/dev/null 2>&1
         then
-            grub_config 'plymouth' 'GRUB_CMDLINE_LINUX_DEFAULT' 'splash'
+            grub_config_add 'plymouth' 'GRUB_CMDLINE_LINUX_DEFAULT' 'splash'
             grub_update
             break
         fi
