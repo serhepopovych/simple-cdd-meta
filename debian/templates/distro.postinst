@@ -18,31 +18,39 @@ false() { ! :; }
 _cmdline_file='/proc/cmdline'
 cmdline_file="${cmdline_file:-${_cmdline_file}}"
 
-# Usage: cmdline_get_console [<file>]
+# Usage: cmdline_get_console [<file>] [<inuser>|<ingrub>]
 cmdline_get_console()
 {
     local func="${FUNCNAME:-cmdline_get_console}"
 
     local file="${1:-$cmdline_file}"
+    local inuser="${2+x}"
 
     # Based on grub-installer udeb code.
 
     set -- $(cat "$file")
 
-    local serial=
+    local serial=''
 
     # Get the last 'console=' entry (if none, the whole string is returned)
     while [ $# -gt 0 ]; do
         case "$1" in
+            '--'|'---')
+                inuser='x'
+                ;;
             console=ttyS*|console=hvc*|console=com*)
-                serial="$1"
+                if [ -n "$inuser" ]; then
+                    serial="$1"
+                fi
                 ;;
         esac
         shift
     done
 
     if [ -n "$serial" ]; then
-        echo "$serial"
+        printf '%s\n' "$serial"
+    else
+        return
     fi
 }
 
