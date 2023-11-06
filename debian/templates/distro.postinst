@@ -256,8 +256,11 @@ grub__config()
     IFS="$ifs"
 
     if t=" $* " && [ -n "${t##*[!$IFS]*}" ]; then
-        # Nothing to configure: all values already present
-        return 0
+        if [ -n "${__grub_config_append__-}" ]; then
+            # Nothing to configure: all values already present or "$*" empty
+            return 0
+        fi
+        set --
     fi
 
     t="/etc/default/grub.d/$name.cfg"
