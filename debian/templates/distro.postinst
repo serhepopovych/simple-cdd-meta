@@ -32,52 +32,62 @@ unique()
     printf '%s\n' "$r"
 }
 
-# Usage: intersect [<sep>] <set1> <set2>
-intersect()
+# Usage: intersect__ {<sep>|''} {<set1>|''} [<set2>|'']
+intersect__()
 {
-    local func="${FUNCNAME:-intersect}"
+    local func="${func:-${FUNCNAME:-intersect__}}"
+
+    : ${__intersect_test_op__:?${func}() must not be called directly}
 
     local sep="${1:-|}"
-    local set1="${2:?missing 2d arg to ${func}() <set1>}"
-    shift 2
 
-    local ifs="$IFS"
-    IFS="$sep" && set -- ${1#$sep}
-    IFS="$ifs"
+    local set1="${2:-$sep}"
+    if [ -n "${set1##$sep*}" -o -n "${set1%%*$sep}" ]; then
+        set1=''
+        : ${set1:?${func}() set1 does not match [$sep[[<val1>$sep..]$sep]]}
+    fi
 
     local r="$sep"
-    while [ $# -gt 0 ]; do
-        # unique() and in set1
-        [ -z "${r##*$sep$1$sep*}" -o -n "${set1##*$sep$1$sep*}" ] ||
-            r="$r$1$sep"
-        shift
-    done
+
+    if [ -n "${3-}" ]; then
+        local set2="$3"
+
+        if [ -n "${set2##$sep*$sep*}" -o -n "${set2%%*$sep*$sep}" ]; then
+            set2=''
+            : ${set2:?${func}() set2 does not match $sep[[<val1>$sep..]$sep}
+        fi
+
+        local ifs="$IFS"
+        IFS="$sep" && set -- ${set2#$sep}
+        IFS="$ifs"
+
+        local t
+        while [ $# -gt 0 ]; do
+            t="*$sep$1$sep*"
+            # unique() and not in set1
+            [ -z "${r##$t}" -o ${__intersect_test_op__} "${set1##$t}" ] ||
+                r="$r$1$sep"
+            shift
+        done
+    fi
 
     printf '%s\n' "$r"
 }
 
-# Usage: n_intersect [<sep>] <set1> <set2>
+# Usage: intersect {<sep>|''} {<set1>|''} [<set2>|'']
+intersect()
+{
+    local func="${FUNCNAME:-intersect}"
+    local __intersect_test_op__='-n'
+    intersect__ "$@" || return
+}
+
+# Usage: n_intersect {<sep>|''} {<set1>|''} [<set2>|'']
 n_intersect()
 {
     local func="${FUNCNAME:-n_intersect}"
-
-    local sep="${1:-|}"
-    local set1="${2:?missing 2d arg to ${func}() <set1>}"
-    shift 2
-
-    local ifs="$IFS"
-    IFS="$sep" && set -- ${1#$sep}
-    IFS="$ifs"
-
-    local r="$sep"
-    while [ $# -gt 0 ]; do
-        # unique() and not in set1
-        [ -z "${r##*$sep$1$sep*}" -o -z "${set1##*$sep$1$sep*}" ] ||
-            r="$r$1$sep"
-        shift
-    done
-
-    printf '%s\n' "$r"
+    local __intersect_test_op__='-z'
+    intersect__ "$@" || return
 }
 
 ## Boot command line parameters handling helpers
