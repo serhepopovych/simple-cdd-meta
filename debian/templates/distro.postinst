@@ -292,7 +292,7 @@ grub__config()
 
         printf '%s="%s%s"\n' \
             "$var" \
-            "${__grub_config_append__:+\${$var:+\$$var }}" \
+            "${__grub_config_append__:+\${$var:+\$$var \}}" \
             "$*" \
             #
     } >>"$t"
