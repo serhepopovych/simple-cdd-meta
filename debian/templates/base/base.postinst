@@ -43,6 +43,12 @@ if [ -f "$grub2default" ]; then
         grub_serial_tty="${grub_serial_tty##console=}"
         grub_serial_tty="${grub_serial_tty%%,*}"
 
+        # enable gfxterm if possible
+
+        if pkg_is_installed 'desktop-base'; then
+            grub_config_add 'gfxterm' 'GRUB_TERMINAL' 'gfxterm'
+        fi
+
         # disable "Advanced options ..." submenu and put entries in main menu
 
         grub_config_set 'submenu' 'GRUB_DISABLE_SUBMENU' 'y'
