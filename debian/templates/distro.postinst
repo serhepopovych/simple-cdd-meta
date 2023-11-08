@@ -405,6 +405,16 @@ grub_config_get_val()
 
 ## Package manager helpers
 
+if [ -z "${pkg_is_installed__cmd-}" ]; then
+    if type rpm >/dev/null 2>&1; then
+        pkg_is_installed__cmd='rpm -qi'
+    elif type dpkg >/dev/null 2>&1; then
+        pkg_is_installed__cmd='dpkg -s'
+    else
+        pkg_is_installed__cmd='false'
+    fi
+fi
+
 # Usage: pkg_is_installed <pkg_name>
 pkg_is_installed()
 {
@@ -412,17 +422,7 @@ pkg_is_installed()
 
     local pkg_name="${1:?missing 1st arg to ${func}() <pkg_name>}"
 
-    if [ -z "${pkg_is_installed__cmd-}" ]; then
-        if type rpm >/dev/null 2>&1; then
-            pkg_is_installed__cmd='rpm -qi'
-        elif type dpkg >/dev/null 2>&1; then
-            pkg_is_installed__cmd='dpkg -s'
-        else
-            pkg_is_installed__cmd='false'
-        fi
-    fi
-
-    $pkg_is_installed__cmd "$pkg_name" >/dev/null 2>&1 || return
+    ${pkg_is_installed__cmd:-false} "$pkg_name" >/dev/null 2>&1 || return
 }
 
 ## Shell-style file handling helpers
