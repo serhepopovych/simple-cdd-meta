@@ -92,7 +92,7 @@ n_intersect()
 
 ## Boot command line parameters handling helpers
 
-_cmdline_file='/proc/cmdline'
+readonly _cmdline_file='/proc/cmdline'
 cmdline_file="${cmdline_file:-${_cmdline_file}}"
 
 # Usage: cmdline_get_console [<file>] [<inuser>|<ingrub>]
