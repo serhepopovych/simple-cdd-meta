@@ -283,7 +283,7 @@ grub__config()
         # Add header to annotate configuration block, if needed
         if [ -z "${__grub_config_name__}" -a -n "${t%%*.cfg}" ]; then
             echo
-            echo "### $name"
+            echo "### ${name}${by:+ $by}"
         fi
 
         printf '%s="%s%s"\n' \
@@ -428,6 +428,7 @@ if by="${0##*/}" && [ -n "${by##*bash*}" ]; then
 else
     by='by distro.postinst'
 fi
+readonly by
 
 # Usage: shell_var_replace <file> <opt> <val>
 shell_var_replace()
