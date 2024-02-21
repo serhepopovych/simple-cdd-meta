@@ -277,11 +277,7 @@ grub__config()
     t="/etc/default/grub.d/$name.cfg"
 
     # Add configuration
-    if [ -d "${t%/*.cfg}/" ]; then
-        rm -f "$t" ||:
-    else
-        t="${t%.d/*.cfg}"
-    fi
+    [ -d "${t%/*.cfg}/" ] || t="${t%.d/*.cfg}"
 
     {
         # Add header to annotate configuration block, if needed
