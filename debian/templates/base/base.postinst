@@ -16,9 +16,25 @@ if [ -f "$grub2default" ]; then
         pkg_is_installed "grub-$g" ||
             continue
 
+        # split GRUB_TERMINAL into GRUB_TERMINAL_INPUT and GRUB_TERMINAL_OUTPUT
+
+        GRUB_TERMINAL=''
+        grub_config_get 'GRUB_TERMINAL'
+
+        # no profile should use GRUB_TERMINAL after this split as it overrides
+        # GRUB_TERMINAL_INPUT and GRUB_TERMINAL_OUTPUT in grub-mkconfig(8)
+        if [ -n "$GRUB_TERMINAL" ]; then
+            grub_config_set 'terminal' 'GRUB_TERMINAL' ''
+            grub_config_set 'terminal' 'GRUB_TERMINAL_INPUT' $GRUB_TERMINAL
+            grub_config_set 'terminal' 'GRUB_TERMINAL_OUTPUT' $GRUB_TERMINAL
+        fi
+
+        unset GRUB_TERMINAL
+
         # enable platform console
 
-        grub_config_add 'console' 'GRUB_TERMINAL' 'console'
+        grub_config_add 'console' 'GRUB_TERMINAL_INPUT' 'console'
+        grub_config_add 'console' 'GRUB_TERMINAL_OUTPUT' 'console'
 
         # enable serial console
 
@@ -41,7 +57,8 @@ if [ -f "$grub2default" ]; then
                 'GRUB_SERIAL_COMMAND' \
                 "$(grub_serial_console "$grub_serial_tty")" \
                 #
-            grub_config_add '' 'GRUB_TERMINAL' 'serial'
+            grub_config_add '' 'GRUB_TERMINAL_INPUT' 'serial'
+            grub_config_add '' 'GRUB_TERMINAL_OUTPUT' 'serial'
         fi
 
         grub_serial_tty="${grub_serial_tty##console=}"
@@ -50,7 +67,7 @@ if [ -f "$grub2default" ]; then
         # enable gfxterm if possible
 
         if pkg_is_installed 'desktop-base'; then
-            grub_config_add 'gfxterm' 'GRUB_TERMINAL' 'gfxterm'
+            grub_config_add 'gfxterm' 'GRUB_TERMINAL_OUTPUT' 'gfxterm'
         fi
 
         # disable "Advanced options ..." submenu and put entries in main menu
