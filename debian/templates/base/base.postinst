@@ -16,6 +16,10 @@ if [ -f "$grub2default" ]; then
         pkg_is_installed "grub-$g" ||
             continue
 
+        # enable platform console
+
+        grub_config_add 'console' 'GRUB_TERMINAL' 'console'
+
         # enable serial console
 
         grub_serial_tty="$(
@@ -37,7 +41,7 @@ if [ -f "$grub2default" ]; then
                 'GRUB_SERIAL_COMMAND' \
                 "$(grub_serial_console "$grub_serial_tty")" \
                 #
-            grub_config_add '' 'GRUB_TERMINAL' 'serial' 'console'
+            grub_config_add '' 'GRUB_TERMINAL' 'serial'
         fi
 
         grub_serial_tty="${grub_serial_tty##console=}"
