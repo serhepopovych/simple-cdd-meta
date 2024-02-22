@@ -16,6 +16,30 @@ if [ -f "$grub2default" ]; then
         pkg_is_installed "grub-$g" ||
             continue
 
+        # symlink grub.cfg to /etc/grub2{,-efi}.cfg same as in RHEL
+
+        for f in \
+            '/boot/grub/grub.cfg' \
+            '/boot/grub2/grub.cfg' \
+            ''
+            #
+        do
+            if [ -f "$f" -o -d "$f/locale" -o -d "$f/fonts" ]; then
+                f="..$f"
+
+                t='/etc/grub2.cfg'
+                [ -L "$t" ] || ln -sf "$f" "$t"
+
+                case "$g" in
+                    efi-*)
+                        t='/etc/grub2-efi.cfg'
+                        [ -L "$t" ] || ln -sf "$f" "$t"
+                        ;;
+                esac
+            fi
+        done
+        unset f t
+
         # split GRUB_TERMINAL into GRUB_TERMINAL_INPUT and GRUB_TERMINAL_OUTPUT
 
         GRUB_TERMINAL=''

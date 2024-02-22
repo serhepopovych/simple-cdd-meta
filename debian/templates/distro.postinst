@@ -154,9 +154,9 @@ grub_update()
         local f t
         for f in \
             '/etc/grub2.cfg' \
+            '/boot/grub/grub.cfg' \
             '/etc/grub2-efi.cfg' \
             '/boot/grub2/grub.cfg' \
-            '/boot/grub/grub.cfg' \
             '' \
             #
         do

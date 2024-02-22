@@ -41,7 +41,11 @@ setserial
 memtest86+
 
 /* Power management support */
+#if version < 10
 cpufrequtils
+#else
+tuned
+#endif
 
 numactl
 sysfsutils
