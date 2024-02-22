@@ -1,29 +1,31 @@
 
-# Processor microcode and update tools
+/* Processor microcode and update tools */
 amd64-microcode
 intel-microcode
 iucode-tool
-#microcode.ctl
+/*microcode.ctl*/
 
-# Firmware blobs
+/* Firmware blobs */
 firmware-atheros
-#firmware-b43-installer
-#firmware-b43legacy-installer
+#if 0
+firmware-b43-installer
+firmware-b43legacy-installer
+#endif
 firmware-bnx2
 firmware-bnx2x
 firmware-brcm80211
-#firmware-cavium
+/*firmware-cavium*/
 firmware-libertas
 firmware-linux-free
 firmware-linux-nonfree
-#firmware-misc-nonfree
+/*firmware-misc-nonfree*/
 firmware-myricom
 firmware-netxen
 firmware-qlogic
 firmware-realtek
 firmware-iwlwifi
 
-# Hardware information/configuration tools
+/* Hardware information/configuration tools */
 dmidecode
 lshw
 hwloc-nox
@@ -35,20 +37,24 @@ ipmitool
 smartmontools
 setserial
 
-# Boot, kernel and modules helper packages
+/* Boot, kernel and modules helper packages */
 memtest86+
 
-# Power management support
+/* Power management support */
 cpufrequtils
 
 numactl
 sysfsutils
 
-# Various hardware management serivces
+/* Various hardware management serivces */
 irqbalance
-#mcelog
+#if version < 10
+mcelog
+#else
+rasdaemon
+#endif
 lm-sensors
 
-# Disk management tools
+/* Disk management tools */
 hdparm
 sdparm
