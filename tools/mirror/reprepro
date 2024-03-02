@@ -1,0 +1,57 @@
+
+pkglst="$simple_cdd_dir/profiles/${simple_cdd_temp##*/}.pkglst"
+if [ -s "$pkglst" ]; then
+    if pkglst='|'; then
+        while read package action; do
+            # Ignore comments and separators
+            [ -n "${package##*[#|:]*}" ] || continue
+
+            # See reprepro(1) FilterList for valid actions
+            case "$action" in
+                'install'|'hold'|'upgradeonly'|'supersede')
+                    ;;
+                'deinstall'|'purge'|'warning'|'error')
+                    ;;
+                '= '*)
+                    # = version
+                    ;;
+                *)
+                    continue
+                    ;;
+            esac
+
+            # Only last $package takes effect
+            if [ -n "${pkglst##*|$package:*|*}" ]; then
+                pkglst="$pkglst$package:$action|"
+            else
+                left="${pkglst%%|$package:*|*}"
+                right="${pkglst##*|$package:*|}"
+
+                pkglst="$left|$package:$action|$right"
+            fi
+        done
+    fi <"$pkglst"
+
+    # Usage: echo ...
+    echo()
+    {
+        # echo $p install
+        if [ $# -eq 2 ]; then
+            # Hook to rewrite action on package
+            if [ "$2" = 'install' ]; then
+                if [ -z "${pkglst##*|$1:*|*}" ]; then
+                    local action="$pkglst"
+
+                    action="${action##*|$1:}"
+                    action="${action%%|*}"
+
+                    set -- "$1" "$action"
+                fi
+            fi
+        fi
+
+        command echo "$@"
+    }
+fi
+
+. '/usr/share/simple-cdd/tools/mirror/reprepro'
